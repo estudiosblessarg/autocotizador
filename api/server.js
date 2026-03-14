@@ -16,7 +16,7 @@ res.status(200).end()
 
 })
 
-app.use("/api/auth", authRoutes)
+app.use("/auth", authRoutes)
 
 
 
