@@ -1,19 +1,38 @@
 const express = require("express")
-const serverless = require("serverless-http")
+const cors = require("cors")
 
 const authRoutes = require("./src/routes/auth.routes")
 
 const app = express()
 
+// ======================
+// MIDDLEWARE
+// ======================
+
+app.use(cors())
 app.use(express.json())
 
-// TEST API
+// ======================
+// STATUS TEST
+// ======================
+
 app.get("/api/status",(req,res)=>{
  console.log("STATUS OK")
- res.status(200).end()
+ res.status(200).json({ok:true})
 })
 
-// AUTH ROUTES
+// ======================
+// ROUTES
+// ======================
+
 app.use("/api/auth",authRoutes)
 
-module.exports = serverless(app)
+// ======================
+// SERVER START
+// ======================
+
+const PORT = process.env.PORT || 3000
+
+app.listen(PORT,()=>{
+ console.log("SERVER RUNNING ON PORT",PORT)
+})
