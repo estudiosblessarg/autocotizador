@@ -16,7 +16,7 @@ res.status(200).json("Database cargada correctamente").end()
 
 })
 app.post("/auth/register",(req,res)=>{
-    if (!res) {
+    if (!res.ok) {
         res.json("Ruta no encontrada")
     }
   res.json({ok:true})
