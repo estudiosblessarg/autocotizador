@@ -6,6 +6,8 @@ const { db } = require("../src/config/firebase")
 
 const app = express()
 
+app.use(express.json())
+
 app.get("/api/status", async (req,res)=>{
 
 await db.collection("test").limit(1).get()
