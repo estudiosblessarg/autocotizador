@@ -1,5 +1,6 @@
 const express = require("express")
 const cors = require("cors")
+const path = require("path")
 
 const authRoutes = require("./src/routes/auth.routes")
 
@@ -13,6 +14,12 @@ app.use(cors())
 app.use(express.json())
 
 // ======================
+// STATIC FILES
+// ======================
+
+app.use(express.static(path.join(__dirname,"public")))
+
+// ======================
 // STATUS TEST
 // ======================
 
@@ -22,10 +29,18 @@ app.get("/api/status",(req,res)=>{
 })
 
 // ======================
-// ROUTES
+// API ROUTES
 // ======================
 
 app.use("/api/auth",authRoutes)
+
+// ======================
+// FRONTEND ROUTES
+// ======================
+
+app.get("/",(req,res)=>{
+ res.sendFile(path.join(__dirname,"public","index.html"))
+})
 
 // ======================
 // SERVER START
