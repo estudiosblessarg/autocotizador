@@ -1,0 +1,29 @@
+{
+  "rangos_km": [
+    {
+      "min": 1,
+      "max": 50000,
+      "descuento": 20
+    },
+    {
+      "min": 50001,
+      "max": 100000,
+      "descuento": 30
+    },
+    {
+      "min": 100001,
+      "max": 150000,
+      "descuento": 40
+    },
+    {
+      "min": 150001,
+      "max": 200000,
+      "descuento": 50
+    },
+    {
+      "min": 200001,
+      "max": 9999999,
+      "descuento": 55
+    }
+  ]
+}

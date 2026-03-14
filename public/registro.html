@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Registro</title>
+
+<link rel="stylesheet" href="./css/estilos.css">
+
+</head>
+
+<body>
+
+<header>
+
+Registro de usuario
+
+</header>
+
+<div class="container">
+
+<div class="panel">
+
+<h2>Crear cuenta</h2>
+
+<p>Registra un nuevo usuario.</p>
+
+<hr>
+
+<label>Email</label>
+<input type="email" id="email">
+
+<label>Password</label>
+<input type="password" id="password">
+
+<label>Rol</label>
+<select id="role">
+
+<option value="cotizador">Cotizador</option>
+<option value="admin">Administrador</option>
+
+</select>
+
+<button id="registerBtn">
+Registrar
+</button>
+
+<p id="mensaje"></p>
+
+<hr>
+
+<p>
+¿Ya tienes cuenta?
+<a href="login.html">Ir al login</a>
+</p>
+
+</div>
+
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="js/registro.js"></script>
+
+</body>
+</html>

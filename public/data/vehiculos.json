@@ -1,0 +1,45 @@
+{
+  "marcas": [
+    {
+      "nombre": "Toyota",
+      "modelos": [
+        {
+          "nombre": "Corolla",
+          "versiones": [
+            {
+              "nombre": "XLI",
+              "anios": [
+                { "anio": 2020, "precio": 20000000 },
+                { "anio": 2021, "precio": 23000000 }
+              ]
+            },
+            {
+              "nombre": "SEG",
+              "anios": [
+                { "anio": 2020, "precio": 25000000 },
+                { "anio": 2021, "precio": 27000000 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "nombre": "Volkswagen",
+      "modelos": [
+        {
+          "nombre": "Gol",
+          "versiones": [
+            {
+              "nombre": "Trend",
+              "anios": [
+                { "anio": 2019, "precio": 9000000 },
+                { "anio": 2020, "precio": 10500000 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

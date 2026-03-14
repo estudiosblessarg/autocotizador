@@ -1,0 +1,492 @@
+/* =========================================
+   RESET GENERAL
+========================================= */
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+
+html{
+    font-size:16px;
+}
+
+body{
+
+    background:#f5f5f5;
+    color:#222;
+    line-height:1.5;
+
+    overflow-x:hidden; /* evita desbordes */
+
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+header{
+
+    background:#111;
+    color:white;
+
+    padding:20px;
+    min-height:90px;
+
+    text-align:center;
+
+    font-size:22px;
+    font-weight:600;
+
+    letter-spacing:1px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    position:relative;
+
+    max-width:100%;
+
+}
+
+
+/* =========================================
+   CONTENEDOR PRINCIPAL
+========================================= */
+
+.container{
+
+    max-width:900px;
+    margin:auto;
+
+    padding:30px 20px;
+
+    width:100%;
+}
+
+
+/* =========================================
+   PANEL
+========================================= */
+
+.panel{
+
+    background:white;
+
+    padding:30px;
+
+    border-radius:10px;
+
+    margin-top:25px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+
+    border:1px solid #e4e4e4;
+
+    width:100%;
+    max-width:100%;
+
+}
+
+
+/* =========================================
+   TITULOS
+========================================= */
+
+h2{
+
+    margin-bottom:10px;
+    font-size:22px;
+
+}
+
+p{
+
+    color:#555;
+    margin-bottom:15px;
+
+}
+
+hr{
+
+    border:none;
+    border-top:1px solid #e3e3e3;
+    margin:20px 0;
+
+}
+
+
+/* =========================================
+   LABELS
+========================================= */
+
+label{
+
+    display:block;
+
+    margin-top:14px;
+
+    font-weight:600;
+
+    font-size:14px;
+
+}
+
+
+/* =========================================
+   INPUTS
+========================================= */
+
+select,
+input{
+
+    width:100%;
+
+    padding:12px;
+
+    margin-top:6px;
+
+    border-radius:6px;
+
+    border:1px solid #ccc;
+
+    font-size:14px;
+
+    background:white;
+
+    transition:all .2s ease;
+
+}
+
+
+select:focus,
+input:focus{
+
+    border-color:#777;
+
+    outline:none;
+
+    box-shadow:0 0 0 2px rgba(0,0,0,0.05);
+
+}
+
+
+/* =========================================
+   BOTONES
+========================================= */
+
+button{
+
+    width:100%;
+
+    margin-top:15px;
+
+    padding:12px;
+
+    border:none;
+
+    border-radius:6px;
+
+    background:black;
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:background .25s ease;
+
+}
+
+button:hover{
+
+    background:#555;
+
+}
+
+
+/* =========================================
+   LOGOUT
+========================================= */
+
+.logout-btn{
+
+    position:absolute;
+
+    right:20px;
+
+    top:50%;
+
+    transform:translateY(-50%);
+
+    background:#636060;
+
+    padding:8px 14px;
+
+    border-radius:4px;
+
+    height:40px;
+
+    width:auto;
+
+}
+
+
+/* =========================================
+   RESULTADO
+========================================= */
+
+.resultado{
+
+    margin-top:20px;
+
+    font-size:22px;
+
+    font-weight:700;
+
+    padding:15px;
+
+    border-radius:6px;
+
+    background:#f1f1f1;
+
+    border:1px solid #ddd;
+
+    text-align:center;
+
+}
+
+
+/* =========================================
+   WRAPPER SCROLL TABLAS
+========================================= */
+
+.tabla-scroll{
+
+    width:100%;
+
+    overflow-x:auto;
+
+    overflow-y:auto;
+
+    margin-top:20px;
+
+}
+
+
+/* scrollbar suave */
+
+.tabla-scroll::-webkit-scrollbar{
+
+    height:6px;
+
+}
+
+.tabla-scroll::-webkit-scrollbar-thumb{
+
+    background:#bbb;
+    border-radius:10px;
+
+}
+
+
+/* =========================================
+   TABLAS
+========================================= */
+
+.tabla{
+
+    border-collapse:collapse;
+
+    font-size:14px;
+
+    min-width:700px; /* fuerza scroll si la pantalla es chica */
+
+}
+
+
+.tabla th{
+
+    background:#111;
+
+    color:white;
+
+    padding:10px;
+
+    text-align:center;
+
+    white-space:nowrap;
+
+}
+
+
+.tabla td{
+
+    border:1px solid #ddd;
+
+    padding:10px;
+
+    text-align:center;
+
+    white-space:nowrap;
+
+}
+
+
+.tabla tr:nth-child(even){
+
+    background:#f7f7f7;
+
+}
+
+
+/* =========================================
+   FOOTER
+========================================= */
+
+footer{
+
+    text-align:center;
+
+    margin-top:40px;
+
+    color:#777;
+
+    font-size:13px;
+
+}
+
+
+/* ====================================================
+   MOBILE (APP STYLE)
+==================================================== */
+
+@media (max-width:768px){
+
+body{
+
+    background:#ececec;
+
+}
+
+/* HEADER */
+
+header{
+
+    flex-direction:column;
+
+    gap:10px;
+
+    padding:18px;
+
+    font-size:18px;
+
+}
+
+.logout-btn{
+
+    position:static;
+
+    transform:none;
+
+    width:100%;
+
+}
+
+
+/* CONTENEDOR */
+
+.container{
+
+    padding:16px;
+
+}
+
+
+/* PANEL */
+
+.panel{
+
+    padding:20px;
+
+    margin-top:16px;
+
+    border-radius:14px;
+
+}
+
+
+/* INPUTS */
+
+select,
+input{
+
+    padding:14px;
+
+    font-size:16px;
+
+}
+
+
+/* BOTONES */
+
+button{
+
+    padding:14px;
+
+    font-size:16px;
+
+    border-radius:8px;
+
+}
+
+
+/* RESULTADO */
+
+.resultado{
+
+    font-size:20px;
+
+}
+
+}
+
+
+/* ====================================================
+   MOBILE PEQUEÑO
+==================================================== */
+
+@media (max-width:480px){
+
+header{
+
+    font-size:16px;
+
+}
+
+.panel{
+
+    padding:18px;
+
+}
+
+h2{
+
+    font-size:18px;
+
+}
+
+button{
+
+    font-size:15px;
+
+}
+
+}

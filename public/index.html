@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+
+<!--
+====================================================
+ARCHIVO PRINCIPAL DEL SISTEMA
+index.html
+
+Este archivo actúa como punto de entrada del sistema.
+Verifica si hay un usuario autenticado y redirige
+al panel correspondiente.
+
+Roles disponibles:
+
+admin
+cotizador
+
+Si no hay sesión iniciada → redirige a login.html
+====================================================
+-->
+
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Sistema Cotizador de Vehículos</title>
+
+<link rel="stylesheet" href="css/estilos.css">
+
+<script>
+
+/*
+====================================================
+VERIFICACION DE SESION
+====================================================
+*/
+
+function verificarSesion(){
+
+    // obtener usuario guardado en localStorage
+
+    const usuario = localStorage.getItem("usuario");
+
+    // si no existe usuario redirigir al login
+
+    if(!usuario){
+
+        window.location = "login.html";
+
+        return;
+    }
+
+    // redireccion segun rol
+
+    if(usuario === "admin"){
+
+        window.location = "admin.html";
+
+    }
+
+    if(usuario === "cotizador"){
+
+        window.location = "cotizador.html";
+
+    }
+
+}
+
+</script>
+
+</head>
+
+<body onload="verificarSesion()">
+
+<header>
+
+Sistema Profesional de Cotización de Vehículos
+
+</header>
+
+<div class="container">
+
+<div class="panel">
+
+<h2>Cargando sistema...</h2>
+
+<p>
+
+Redirigiendo al panel correspondiente.
+
+</p>
+
+</div>
+
+</div>
+<footer style="text-align:center;margin-top:40px;color:#888;font-size:14px;">
+
+Demo de sistema de cotización para concesionarias
+<p>Diseñado por Estudios Bless</p>
+
+</footer>
+</body>
+
+</html>

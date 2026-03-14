@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Panel Admin</title>
+
+<link rel="stylesheet" href="css/estilos.css">
+
+<script src="js/admin.js"></script>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>Panel Administrador</h1>
+
+<button class="logout-btn" onclick="logout()">
+Cerrar sesión
+</button>
+
+</header>
+
+
+<div class="container">
+
+<!-- ============================= -->
+<!-- TABLA DE COTIZACIONES -->
+<!-- ============================= -->
+
+<div class="panel">
+
+<h2>Cotizaciones realizadas</h2>
+
+<div class="tabla-scroll">
+<table class="tabla">
+
+<thead>
+
+<tr>
+
+<th>Marca</th>
+<th>Modelo</th>
+<th>Versión</th>
+<th>Año</th>
+<th>KMs</th>
+<th>Estado</th>
+<th>Precio</th>
+<th>Fecha</th>
+<th>Usuario</th>
+<th>Acciones</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tabla">
+
+<!-- Cotizaciones generadas por JS -->
+
+</tbody>
+
+</table>
+</div>
+
+</div>
+
+
+<!-- ============================= -->
+<!-- PANEL DE USUARIOS -->
+<!-- ============================= -->
+
+<div class="panel">
+
+<h2>Gestión de Usuarios</h2>
+
+<div class="tabla-scroll">
+
+<table class="tabla">
+
+<thead>
+
+<tr>
+<th>Email</th>
+<th>Rol</th>
+</tr>
+
+</thead>
+
+<tbody id="tablaUsuarios">
+
+<!-- Usuarios generados por JS -->
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<!-- ============================= -->
+<!-- CONFIGURACION DE KM -->
+<!-- ============================= -->
+
+<div class="panel">
+
+<h2>Configuración de Descuento por Kilometraje</h2>
+
+<div class="campo">
+
+<label>Kilómetros</label>
+<input type="number" id="kmValor">
+
+</div>
+
+<div class="campo">
+
+<label>Descuento (%)</label>
+<input type="number" id="kmDesc">
+
+</div>
+
+<button onclick="agregarKM()">
+Agregar regla
+</button>
+
+<br><br>
+
+<div class="tabla-scroll">
+
+<table class="tabla">
+
+<thead>
+
+<tr>
+<th>KMs</th>
+<th>Descuento</th>
+<th>Acción</th>
+</tr>
+
+</thead>
+
+<tbody id="tablaKM">
+
+<!-- Configuración generada por JS -->
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+<footer style="text-align:center;margin-top:40px;color:#888;font-size:14px;">
+
+Demo de sistema de cotización para concesionarias
+<p>Diseñado por Estudios Bless</p>
+
+</footer>
+
+</body>
+</html>

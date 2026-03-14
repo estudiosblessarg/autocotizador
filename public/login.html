@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Login</title>
+
+<link rel="stylesheet" href="./css/estilos.css">
+
+</head>
+
+<body>
+
+<header>
+
+Sistema Cotizador
+
+</header>
+
+<div class="container">
+
+<div class="panel">
+
+<h2>Iniciar sesión</h2>
+
+<p>Ingrese su cuenta para acceder al sistema.</p>
+
+<hr>
+
+<label>Email</label>
+<input type="email" id="email">
+
+<label>Password</label>
+<input type="password" id="password">
+
+<button id="loginBtn">
+Ingresar
+</button>
+
+<p id="mensaje"></p>
+
+<hr>
+
+<p>
+¿No tienes cuenta?
+<a href="registro.html">Crear cuenta</a>
+</p>
+
+</div>
+
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="js/login.js"></script>
+
+</body>
+</html>
