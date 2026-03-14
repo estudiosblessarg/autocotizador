@@ -1,5 +1,6 @@
 const express = require("express")
 const serverless = require("serverless-http")
+const authRoutes = require("../src/routes/auth.routes")
 
 const { db } = require("../src/config/firebase")
 
@@ -12,5 +13,9 @@ await db.collection("test").limit(1).get()
 res.status(200).end()
 
 })
+
+app.get("/api/auth", authRoutes)
+
+
 
 module.exports = serverless(app)
