@@ -1,22 +1,15 @@
 const express = require("express")
 const serverless = require("serverless-http")
 
-//const authRoutes = require("../src/routes/auth.routes")
-
 const app = express()
 
-app.use(express.json())
+app.get("/api/status", (req,res)=>{
 
-// ROUTES
-//app.use("/api/auth", authRoutes)
-
-app.get("/api/status",(req,res)=>{
-
-console.log("STATUS ENDPOINT")
+console.log("STATUS ENDPOINT HIT")
 
 res.json({
 ok:true,
-res: "Api funcionando"
+message:"API funcionando"
 })
 
 })
