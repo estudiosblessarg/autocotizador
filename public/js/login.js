@@ -15,65 +15,30 @@ try{
 
 console.log("🚀 Enviando request a /api/auth/login")
 
-const res = await fetch("/login",{
+const res = await fetch("/api/auth/login",{
+
 method:"POST",
+
 headers:{
 "Content-Type":"application/json"
 },
+
 body:JSON.stringify({
 email,
 password
 })
+
 })
 
 console.log("📡 Response status:", res.status)
 
+const data = await res.json()
 
-// ========================================
-// CAPTURA UNIVERSAL DE RESPUESTA
-// ========================================
-
-const raw = await res.text()
-
-console.log("📨 Raw response:", raw)
-
-let data
-
-try{
-
-data = JSON.parse(raw)
-
-}catch(parseError){
-
-console.warn("⚠️ La respuesta no es JSON, creando objeto manual")
-
-data = {
-success:false,
-error:"Respuesta no JSON del servidor",
-raw:raw
-}
-
-}
-
-console.log("📦 JSON interpretado:", data)
-
-
-// ========================================
-// MANEJO DE RESPUESTA
-// ========================================
+console.log("📦 Response data:", data)
 
 if(res.ok){
 
 console.log("✅ Login correcto")
-
-if(!data.role){
-
-console.warn("⚠️ No se recibió role")
-
-msg.innerText = "Usuario sin rol"
-
-return
-}
 
 console.log("👤 Rol recibido:", data.role)
 
@@ -83,7 +48,6 @@ console.log("➡️ Redirigiendo a admin.html")
 
 window.location.href="admin.html"
 
-return
 }
 
 if(data.role === "cotizador"){
@@ -92,17 +56,11 @@ console.log("➡️ Redirigiendo a cotizador.html")
 
 window.location.href="cotizador.html"
 
-return
 }
-
-console.warn("⚠️ Rol desconocido:", data.role)
-
-msg.innerText = "Rol inválido"
 
 }else{
 
-console.error("❌ Login fallido")
-console.error("📄 Error devuelto:", data)
+console.error("❌ Error en login:", data)
 
 msg.innerText = data.error || "Error desconocido"
 
@@ -110,20 +68,10 @@ msg.innerText = data.error || "Error desconocido"
 
 }catch(err){
 
-console.error("🔥 ERROR FETCH:", err)
+console.error("🔥 Error de conexión:", err)
 
-const errorJSON = {
-success:false,
-error:"Error de conexión",
-message:err.message,
-stack:err.stack
-}
-
-console.log("📦 ERROR JSON:", errorJSON)
-
-msg.innerText = errorJSON.error
+msg.innerText="Error de conexión"
 
 }
 
 })
-
