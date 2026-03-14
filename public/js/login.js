@@ -16,18 +16,14 @@ try{
 console.log("🚀 Enviando request a /api/auth/login")
 
 const res = await fetch("/api/auth/login",{
-
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
-
 body:JSON.stringify({
 email,
 password
 })
-
 })
 
 console.log("📡 Response status:", res.status)
@@ -106,7 +102,6 @@ msg.innerText = "Rol inválido"
 }else{
 
 console.error("❌ Login fallido")
-
 console.error("📄 Error devuelto:", data)
 
 msg.innerText = data.error || "Error desconocido"
@@ -117,18 +112,11 @@ msg.innerText = data.error || "Error desconocido"
 
 console.error("🔥 ERROR FETCH:", err)
 
-
-// ========================================
-// TRANSFORMAR ERROR JS A JSON
-// ========================================
-
 const errorJSON = {
-
 success:false,
 error:"Error de conexión",
 message:err.message,
 stack:err.stack
-
 }
 
 console.log("📦 ERROR JSON:", errorJSON)
@@ -138,6 +126,4 @@ msg.innerText = errorJSON.error
 }
 
 })
-}
 
-})
