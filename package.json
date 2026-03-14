@@ -2,11 +2,11 @@
 "name": "proyecto1cotizadorconcesionaria",
 "version": "1.0.0",
 "description": "Cotizador concesionaria optimizado para Vercel y Firestore",
-"main": "api/server.js",
+"main": "api/index.js",
 "type": "commonjs",
 "scripts": {
-"start": "node api/server.js",
-"dev": "node api/server.js"
+"start": "node api/index.js",
+"dev": "node api/index.js"
 },
 "keywords": [
 "cotizador",
