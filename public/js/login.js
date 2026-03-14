@@ -15,7 +15,7 @@ try{
 
 console.log("🚀 Enviando request a /api/auth/login")
 
-const res = await fetch("/api/auth/login",{
+const res = await fetch("/auth/login",{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
