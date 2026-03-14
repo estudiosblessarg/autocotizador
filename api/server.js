@@ -14,7 +14,7 @@ app.get("/status", async (req,res)=>{
 })
 
 // REGISTER
-app.post("/auth/register", async (req,res)=>{
+app.post("api/auth/register", async (req,res)=>{
 
   const { email, password, role } = req.body
 
