@@ -1,28 +1,40 @@
 const admin = require("firebase-admin")
 
-let app
+let db
 
-if(!admin.apps.length){
+try {
 
- const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g,"\n")
+if (!admin.apps.length) {
 
- app = admin.initializeApp({
-  credential: admin.credential.cert({
-   projectId:process.env.FIREBASE_PROJECT_ID,
-   clientEmail:process.env.FIREBASE_CLIENT_EMAIL,
-   privateKey:privateKey
-  })
- })
+console.log("🔥 Inicializando Firebase Admin")
 
-}else{
+const privateKey = process.env.FIREBASE_PRIVATE_KEY
+  ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+  : undefined
 
- app = admin.app()
+admin.initializeApp({
+credential: admin.credential.cert({
+projectId: process.env.FIREBASE_PROJECT_ID,
+clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+privateKey: privateKey
+})
+})
+
+console.log("✅ Firebase inicializado")
 
 }
 
-const db = admin.firestore()
+db = admin.firestore()
+
+console.log("📦 Firestore conectado")
+
+} catch (error) {
+
+console.error("❌ Error inicializando Firebase:", error)
+
+}
 
 module.exports = {
- admin,
- db
+admin,
+db
 }
