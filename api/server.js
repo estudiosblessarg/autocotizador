@@ -12,7 +12,7 @@ app.get("/status", async (req,res)=>{
 
 await db.collection("test").limit(1).get()
 
-res.status(200).end()
+res.status(200).json("Database cargada correctamente").end()
 
 })
 
