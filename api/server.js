@@ -15,7 +15,10 @@ await db.collection("test").limit(1).get()
 res.status(200).json("Database cargada correctamente").end()
 
 })
+app.post("/auth/register",(req,res)=>{
+  res.json({ok:true})
+})
 
-app.use("/auth", authRoutes)
+//app.use("/auth", authRoutes)
 
 module.exports = serverless(app)
