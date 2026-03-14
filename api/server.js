@@ -1,16 +1,15 @@
 const express = require("express")
 const serverless = require("serverless-http")
 
+const { db } = require("../src/config/firebase")
+
 const app = express()
 
-app.get("/api/status", (req,res)=>{
+app.get("/api/status", async (req,res)=>{
 
-console.log("STATUS ENDPOINT HIT")
+await db.collection("test").limit(1).get()
 
-res.json({
-ok:true,
-message:"API funcionando"
-})
+res.status(200).end()
 
 })
 
