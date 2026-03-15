@@ -1,6 +1,7 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
+const PDFParser = require("pdf2json")
 
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
@@ -18,22 +19,43 @@ const MARCAS_VALIDAS = [
 ]
 
 /*
-IMPORT SEGURO DE pdf-parse
+PARSEAR PDF CON pdf2json
 */
-async function parsePDF(buffer){
+function parsePDF(filePath){
 
- const mod = await import("pdf-parse")
+ return new Promise((resolve,reject)=>{
 
- let parser = mod
+  const pdfParser = new PDFParser()
 
- if(mod.default) parser = mod.default
- if(parser.default) parser = parser.default
+  pdfParser.on("pdfParser_dataError", err =>
+   reject(err)
+  )
 
- if(typeof parser !== "function"){
-  throw new Error("pdf-parse no exporta una función válida")
- }
+  pdfParser.on("pdfParser_dataReady", pdfData => {
 
- return parser(buffer)
+   let texto = ""
+
+   pdfData.Pages.forEach(page=>{
+
+    page.Texts.forEach(text=>{
+
+     text.R.forEach(t=>{
+      texto += decodeURIComponent(t.T) + " "
+     })
+
+    })
+
+    texto += "\n"
+
+   })
+
+   resolve({ text: texto })
+
+  })
+
+  pdfParser.loadPDF(filePath)
+
+ })
 
 }
 
@@ -135,9 +157,7 @@ PROCESAR PDF
 */
 async function procesarPDF(){
 
- const buffer = await fs.readFile(PDF_PATH)
-
- const data = await parsePDF(buffer)
+ const data = await parsePDF(PDF_PATH)
 
  const lineas = data.text.split("\n")
 
