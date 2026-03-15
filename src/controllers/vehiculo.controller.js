@@ -261,4 +261,103 @@ exports.getModelos = async(req,res)=>{
 
  }
 
+ /*
+GET VERSIONES
+*/
+
+exports.getVersiones = async (req,res)=>{
+
+ try{
+
+  const {marca,modelo} = req.params
+
+  console.log("🚗 GET VERSIONES:",marca,modelo)
+
+  const marcaID = limpiarID(marca)
+  const modeloID = limpiarID(modelo)
+
+  const snap = await db
+   .collection("vehiculos")
+   .doc(marcaID)
+   .collection("modelos")
+   .doc(modeloID)
+   .collection("versiones")
+   .get()
+
+  console.log("Versiones encontradas:",snap.size)
+
+  if(snap.empty){
+   return res.json([])
+  }
+
+  const versiones = snap.docs
+   .map(d=>d.data().nombre)
+   .filter(Boolean)
+
+  res.json(versiones)
+
+ }catch(err){
+
+  console.error("ERROR VERSIONES:",err)
+
+  res.status(500).json({
+   error:"error obteniendo versiones"
+  })
+
+ }
+
+}
+
+
+/*
+GET AÑOS
+*/
+
+exports.getAnios = async (req,res)=>{
+
+ try{
+
+  const {marca,modelo,version} = req.params
+
+  console.log("🚗 GET AÑOS:",marca,modelo,version)
+
+  const marcaID = limpiarID(marca)
+  const modeloID = limpiarID(modelo)
+  const versionID = limpiarID(version)
+
+  const doc = await db
+   .collection("vehiculos")
+   .doc(marcaID)
+   .collection("modelos")
+   .doc(modeloID)
+   .collection("versiones")
+   .doc(versionID)
+   .get()
+
+  if(!doc.exists){
+
+   console.log("⚠️ No existen años")
+
+   return res.json([])
+
+  }
+
+  const data = doc.data()
+
+  console.log("Años encontrados:",data.anios)
+
+  res.json(data.anios || [])
+
+ }catch(err){
+
+  console.error("ERROR AÑOS:",err)
+
+  res.status(500).json({
+   error:"error obteniendo años"
+  })
+
+ }
+
+}
+
 }
