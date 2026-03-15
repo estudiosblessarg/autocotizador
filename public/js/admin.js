@@ -1,36 +1,10 @@
 /*
 ========================================================
-CERRAR SESIÓN
-Elimina el token guardado y redirige al login
+CONFIGURACIÓN GENERAL
 ========================================================
 */
 
-function logout(){
-
- // eliminar token almacenado
- localStorage.removeItem("token")
-
- // opcional: limpiar otros datos
- localStorage.removeItem("user")
-
- // redirigir al login
- window.location.href = "login.html"
-
-}
-
-
-
-
-
-/*
-========================================================
-CONFIGURACIÓN GENERAL DE API
-========================================================
-*/
-
-const API = "/api/auth"
-
-
+const API = "/api"
 
 /*
 ========================================================
@@ -42,7 +16,22 @@ function getToken(){
  return localStorage.getItem("token")
 }
 
+/*
+========================================================
+CERRAR SESIÓN
+========================================================
+*/
 
+function logout(){
+
+ console.log("Cerrando sesión")
+
+ localStorage.removeItem("token")
+ localStorage.removeItem("user")
+
+ window.location.href = "login.html"
+
+}
 
 /*
 ========================================================
@@ -54,17 +43,32 @@ async function api(url,method="GET",body=null){
 
  try{
 
+  const token = getToken()
+
+  const headers={
+   "Content-Type":"application/json"
+  }
+
+  if(token){
+   headers["Authorization"]="Bearer "+token
+  }
+
   const res = await fetch(API+url,{
    method,
-   headers:{
-    "Content-Type":"application/json",
-    "Authorization":"Bearer "+getToken()
-   },
+   headers,
    body: body ? JSON.stringify(body):null
   })
 
   if(!res.ok){
+
+   console.warn("API error:",res.status)
+
+   if(res.status === 401){
+    console.warn("Sesión inválida")
+   }
+
    throw new Error("Error API: "+res.status)
+
   }
 
   const text = await res.text()
@@ -74,7 +78,6 @@ async function api(url,method="GET",body=null){
  }catch(err){
 
   console.error("Error fetch:",err)
-
   throw err
 
  }
@@ -89,84 +92,99 @@ VERIFICAR SESIÓN ADMIN
 
 async function verificarRolAdmin(){
 
+ const token = getToken()
+
+ if(!token){
+  console.warn("No hay token, sesión no iniciada")
+  return
+ }
+
  try{
 
-  const res = await fetch(API+"/me",{
+  const res = await fetch(API+"/auth/me",{
    headers:{
-    "Authorization":"Bearer "+getToken()
+    "Authorization":"Bearer "+token
    }
   })
 
   if(!res.ok){
-   window.location.href="login.html"
+   console.warn("No se pudo validar sesión")
    return
   }
 
   const data = await res.json()
 
-  if(!data.role || data.role !== "admin"){
-   window.location.href="login.html"
+  if(!data.role){
+   console.warn("Usuario sin rol")
+   return
+  }
+
+  if(data.role !== "admin"){
+   console.warn("Usuario no es admin")
+   return
   }
 
  }catch(error){
 
   console.error("Error verificando sesión:",error)
-  window.location.href="login.html"
 
  }
 
 }
 
-
-
 /*
 ========================================================
 COTIZACIONES
 ========================================================
-GET /api/auth/
-PUT /api/auth/:id
-DELETE /api/auth/:id
 */
 
 async function cargarCotizaciones(){
 
- const data = await api("/cotizaciones")
+ try{
 
- const tabla = document.getElementById("tabla")
+  const data = await api("/cotizaciones")
 
- tabla.innerHTML=""
+  const tabla = document.getElementById("tabla")
 
- data.forEach(c=>{
+  if(!tabla) return
 
- tabla.innerHTML+=`
- <tr>
- <td>${c.marca}</td>
- <td>${c.modelo}</td>
- <td>${c.version}</td>
- <td>${c.anio}</td>
- <td>${c.km}</td>
- <td>${c.estado}</td>
- <td>${c.precio}</td>
- <td>${new Date(c.fecha).toLocaleDateString()}</td>
- <td>${c.usuario}</td>
- <td>
+  tabla.innerHTML=""
 
- <button onclick="editar('${c.id}')">
- Editar
- </button>
+  data.forEach(c=>{
 
- <button onclick="eliminar('${c.id}')">
- Eliminar
- </button>
+   tabla.innerHTML+=`
+   <tr>
+   <td>${c.marca}</td>
+   <td>${c.modelo}</td>
+   <td>${c.version}</td>
+   <td>${c.anio}</td>
+   <td>${c.km}</td>
+   <td>${c.estado}</td>
+   <td>${c.precio}</td>
+   <td>${new Date(c.fecha).toLocaleDateString()}</td>
+   <td>${c.usuario}</td>
+   <td>
 
- </td>
- </tr>
- `
- })
+   <button onclick="editar('${c.id}')">
+   Editar
+   </button>
+
+   <button onclick="eliminar('${c.id}')">
+   Eliminar
+   </button>
+
+   </td>
+   </tr>
+   `
+  })
+
+ }catch(err){
+
+  console.error("Error cargando cotizaciones",err)
+
+ }
 
 }
-
-
 
 function editar(id){
 
@@ -175,24 +193,19 @@ function editar(id){
 
 }
 
-
-
 function cancelarEdicion(){
 
  document.getElementById("editorCotizacion").style.display="none"
 
 }
 
-
-
 async function guardarEdicion(){
 
  const id = document.getElementById("editId").value
-
  const km = document.getElementById("editKm").value
  const descuento = document.getElementById("editDescuento").value
 
- await api("/"+id,"PUT",{
+ await api("/cotizaciones/"+id,"PUT",{
   km,
   descuento
  })
@@ -202,65 +215,67 @@ async function guardarEdicion(){
 
 }
 
-
-
 async function eliminar(id){
 
  if(!confirm("Eliminar cotización?")) return
 
- await api("/"+id,"DELETE")
+ await api("/cotizaciones/"+id,"DELETE")
 
  cargarCotizaciones()
 
 }
 
-
-
 /*
 ========================================================
 USUARIOS
 ========================================================
-GET /api/auth/users
-PUT /api/auth/users/:id
 */
 
 async function cargarUsuarios(){
 
- const users = await api("/users")
+ try{
 
- const cont = document.getElementById("tablaUsuarios")
+  const users = await api("/users")
 
- cont.innerHTML=""
+  const cont = document.getElementById("tablaUsuarios")
 
- users.forEach(u=>{
+  if(!cont) return
 
- cont.innerHTML+=`
- <tr>
+  cont.innerHTML=""
 
- <td>${u.email}</td>
+  users.forEach(u=>{
 
- <td>
- <select onchange="cambiarRol('${u.id}',this.value)">
+   cont.innerHTML+=`
+   <tr>
 
- <option value="admin" ${u.role=="admin"?"selected":""}>
- admin
- </option>
+   <td>${u.email}</td>
 
- <option value="cotizador" ${u.role=="cotizador"?"selected":""}>
- cotizador
- </option>
+   <td>
+   <select onchange="cambiarRol('${u.id}',this.value)">
 
- </select>
+   <option value="admin" ${u.role=="admin"?"selected":""}>
+   admin
+   </option>
 
- </td>
+   <option value="cotizador" ${u.role=="cotizador"?"selected":""}>
+   cotizador
+   </option>
 
- </tr>
- `
- })
+   </select>
+
+   </td>
+
+   </tr>
+   `
+  })
+
+ }catch(err){
+
+  console.error("Error cargando usuarios",err)
+
+ }
 
 }
-
-
 
 async function cambiarRol(id,role){
 
@@ -268,48 +283,52 @@ async function cambiarRol(id,role){
 
 }
 
-
-
 /*
 ========================================================
 CONFIGURACIÓN KM
 ========================================================
-GET /api/auth/km
-PUT /api/auth/km
 */
 
 async function cargarConfigKM(){
 
- const config = await api("/km")
+ try{
 
- const tabla = document.getElementById("tablaKM")
+  const config = await api("/km")
 
- tabla.innerHTML=""
+  const tabla = document.getElementById("tablaKM")
 
- config.tabla.forEach(r=>{
+  if(!tabla) return
 
- tabla.innerHTML+=`
- <tr>
+  tabla.innerHTML=""
 
- <td>${r.km}</td>
+  config.tabla.forEach(r=>{
 
- <td>${r.descuento}</td>
+   tabla.innerHTML+=`
+   <tr>
 
- <td>
+   <td>${r.km}</td>
 
- <button onclick="eliminarFilaKM(${r.km})">
- eliminar
- </button>
+   <td>${r.descuento}</td>
 
- </td>
+   <td>
 
- </tr>
- `
- })
+   <button onclick="eliminarFilaKM(${r.km})">
+   eliminar
+   </button>
+
+   </td>
+
+   </tr>
+   `
+  })
+
+ }catch(err){
+
+  console.error("Error cargando KM",err)
+
+ }
 
 }
-
-
 
 async function agregarKM(){
 
@@ -329,8 +348,6 @@ async function agregarKM(){
 
 }
 
-
-
 async function eliminarFilaKM(km){
 
  const config = await api("/km")
@@ -343,8 +360,6 @@ async function eliminarFilaKM(km){
 
 }
 
-
-
 /*
 ========================================================
 INICIO PANEL
@@ -353,11 +368,18 @@ INICIO PANEL
 
 window.onload=()=>{
 
+ console.log("Panel cargado")
+
  verificarRolAdmin()
 
  cargarCotizaciones()
  cargarUsuarios()
  cargarConfigKM()
+
+ setInterval(verificarRolAdmin,30000)
+
+}
+
 
  setInterval(verificarRolAdmin,30000)
 
