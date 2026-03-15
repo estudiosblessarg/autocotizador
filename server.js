@@ -4,7 +4,7 @@ const path = require("path")
 
 const authRoutes = require("./src/routes/auth.routes")
 
-const { actualizarSiNecesario } = require("./services/precios.service")
+const { actualizarSiNecesario } = require("./src/services/precios.service")
 
 const app = express()
 
