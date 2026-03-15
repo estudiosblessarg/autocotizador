@@ -11,7 +11,7 @@ const USD_TO_ARS = 1500
 const MARCAS_VALIDAS = [
 "ALFA","FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
 "RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
-"KIA","HYUNDAI","MERCEDES-BENZ","BMW","AUDI"
+"KIA","HYUNDAI","MERCEDES","BMW","AUDI"
 ]
 
 /*
@@ -23,19 +23,17 @@ function parsePDF(filePath){
 
   const pdfParser = new PDFParser()
 
-  pdfParser.on("pdfParser_dataError", err => {
-   reject(err)
-  })
+  pdfParser.on("pdfParser_dataError", err => reject(err))
 
   pdfParser.on("pdfParser_dataReady", pdfData => {
 
    let texto = ""
 
-   pdfData.Pages.forEach(page=>{
+   pdfData.Pages.forEach(page => {
 
-    page.Texts.forEach(text=>{
+    page.Texts.forEach(text => {
 
-     text.R.forEach(t=>{
+     text.R.forEach(t => {
       texto += decodeURIComponent(t.T) + " "
      })
 
@@ -45,7 +43,7 @@ function parsePDF(filePath){
 
    })
 
-   resolve({ text: texto })
+   resolve(texto)
 
   })
 
@@ -56,41 +54,36 @@ function parsePDF(filePath){
 }
 
 /*
-CONVERTIR PRECIO USD -> ARS
+LIMPIAR USD
 */
-function convertirPrecioUSD(texto){
-
- if(!texto) return null
+function limpiarUSD(str){
 
  const limpio =
-  texto.replace(/\./g,"")
-       .replace(",",".")
-       .replace(/[^0-9.]/g,"")
+  str.replace(/\./g,"")
+     .replace(",",".")
+     .replace(/[^0-9.]/g,"")
 
- const usd = Number(limpio)
+ const num = Number(limpio)
 
- if(!usd || usd < 1000) return null
+ if(!num || num < 1000)
+  return null
 
- const ars = Math.round(usd * USD_TO_ARS)
-
- return {
-  usd,
-  ars
- }
+ return num
 
 }
 
 /*
-DETECTAR PRECIO USD
+DETECTAR PRECIO
 */
 function extraerPrecio(linea){
 
  const match =
-  linea.match(/\d{1,3}(\.\d{3})*,\d{2}/)
+  linea.match(/\d{2,3}\.\d{3},\d{2}/)
 
- if(!match) return null
+ if(!match)
+  return null
 
- return convertirPrecioUSD(match[0])
+ return limpiarUSD(match[0])
 
 }
 
@@ -99,38 +92,50 @@ DETECTAR AUTO
 */
 function detectarAuto(linea){
 
- if(!linea.includes("u$s"))
+ const precioUSD = extraerPrecio(linea)
+
+ if(!precioUSD)
   return null
 
- const precio = extraerPrecio(linea)
+ let marcaDetectada = null
 
- if(!precio) return null
+ for(const marca of MARCAS_VALIDAS){
+
+  if(linea.startsWith(marca)){
+   marcaDetectada = marca
+   break
+  }
+
+ }
+
+ if(!marcaDetectada)
+  return null
 
  const texto =
-  linea.split("u$s")[0].trim()
+  linea.replace(marcaDetectada,"")
+       .replace(/\d{2,3}\.\d{3},\d{2}/,"")
+       .trim()
 
  const partes =
   texto.split(/\s+/)
 
- if(partes.length < 2)
+ if(partes.length < 1)
   return null
 
- const marca = partes[0]
-
- if(!MARCAS_VALIDAS.includes(marca))
-  return null
-
- const modelo = partes[1]
+ const modelo = partes[0]
 
  const version =
-  partes.slice(2).join(" ")
+  partes.slice(1).join(" ")
+
+ const precioARS =
+  Math.round(precioUSD * USD_TO_ARS)
 
  return {
-  marca,
+  marca:marcaDetectada,
   modelo,
   version,
-  precioUSD:precio.usd,
-  precioARS:precio.ars
+  precioUSD,
+  precioARS
  }
 
 }
@@ -140,15 +145,14 @@ PROCESAR PDF
 */
 async function procesarPDF(){
 
- if(!await fs.pathExists(PDF_PATH)){
-  throw new Error("No se encontró el PDF en /pdfs/acara_precios.pdf")
- }
+ if(!await fs.pathExists(PDF_PATH))
+  throw new Error("No se encontró el PDF")
 
  console.log("Leyendo PDF ACARA...")
 
- const data = await parsePDF(PDF_PATH)
+ const texto = await parsePDF(PDF_PATH)
 
- const lineas = data.text.split("\n")
+ const lineas = texto.split("\n")
 
  let batch = db.batch()
  let operaciones = 0
@@ -169,7 +173,7 @@ async function procesarPDF(){
   } = auto
 
   const id =
-  `${marca}_${modelo}_${version}`
+   `${marca}_${modelo}_${version}`
    .toLowerCase()
    .replace(/\s+/g,"_")
    .replace(/[^a-z0-9_]/g,"")
@@ -209,7 +213,7 @@ async function procesarPDF(){
 }
 
 /*
-ACTUALIZAR SI NECESARIO
+ACTUALIZAR
 */
 async function actualizarSiNecesario(){
 
@@ -222,7 +226,7 @@ async function actualizarSiNecesario(){
 
   if(!doc.exists){
 
-   console.log("Base vacía, procesando PDF ACARA")
+   console.log("Base vacía, procesando PDF")
 
    await procesarPDF()
 
@@ -244,7 +248,7 @@ async function actualizarSiNecesario(){
 
   if(dias > 30){
 
-   console.log("Actualizando precios ACARA desde PDF")
+   console.log("Actualizando precios")
 
    await procesarPDF()
 
