@@ -5,42 +5,45 @@ const fetch = (...args) =>
 
 
 /*
-BUSCAR PRECIO VEHICULO EN INTERNET
-Ejemplo usando API pública
+BUSCAR PRECIO EN INTERNET
+(MercadoLibre)
 */
 
-async function buscarPrecioVehiculo(marca, modelo, anio){
+async function buscarPrecioVehiculo(marca,modelo,anio){
 
  try{
 
-  const query = `${marca} ${modelo} ${anio}`
+  const query =
+   `${marca} ${modelo} ${anio}`.replace(/\s/g,"-")
 
-  const url = `https://api.api-ninjas.com/v1/cars?make=${marca}&model=${modelo}&year=${anio}`
+  const url =
+   `https://api.mercadolibre.com/sites/MLA/search?q=${query}&category=MLA1744&limit=10`
 
-  const res = await fetch(url,{
-   headers:{
-    "X-Api-Key":process.env.CAR_API_KEY
-   }
-  })
+  const res = await fetch(url)
 
   if(!res.ok){
-   throw new Error("API error")
+   throw new Error("Error API MercadoLibre")
   }
 
   const data = await res.json()
 
-  if(!data.length){
+  if(!data.results || data.results.length === 0){
    return null
   }
 
-  /*
-  Simulación precio promedio
-  (muchas APIs no dan precio real)
-  */
+  const precios =
+   data.results
+    .map(a => a.price)
+    .filter(Boolean)
 
-  const precioEstimado = 15000 + (Math.random()*10000)
+  if(precios.length === 0){
+   return null
+  }
 
-  return Math.round(precioEstimado)
+  const promedio =
+   precios.reduce((a,b)=>a+b,0) / precios.length
+
+  return Math.round(promedio)
 
  }catch(err){
 
@@ -54,17 +57,15 @@ async function buscarPrecioVehiculo(marca, modelo, anio){
 
 
 /*
-OBTENER CONFIGURACION ADMIN
+OBTENER CONFIG ADMIN
 */
 
 async function obtenerConfigKM(){
 
  try{
 
-  const doc = await db
-   .collection("config")
-   .doc("km")
-   .get()
+  const doc =
+   await db.collection("config").doc("km").get()
 
   if(!doc.exists){
    return {descuento:0}
@@ -84,14 +85,23 @@ async function obtenerConfigKM(){
 
 
 /*
-ENDPOINT COTIZAR
+COTIZAR
 */
 
 exports.cotizar = async (req,res)=>{
 
  try{
 
-  const {marca,modelo,anio} = req.body
+  const {marca,modelo,version,anio,km} = req.body
+
+  if(!marca || !modelo || !anio){
+
+   return res.status(400).json({
+    success:false,
+    error:"Datos incompletos"
+   })
+
+  }
 
   /*
   1 BUSCAR PRECIO
@@ -110,30 +120,62 @@ exports.cotizar = async (req,res)=>{
   }
 
   /*
-  2 OBTENER CONFIG ADMIN
+  2 CONFIG ADMIN
   */
 
   const config = await obtenerConfigKM()
 
-  const descuento = config.descuento || 0
+  const descuento =
+   Number(config.descuento || 0)
 
   /*
-  3 CALCULAR PRECIO FINAL
+  3 AJUSTE POR KM
+  */
+
+  let ajusteKm = 0
+
+  if(km){
+
+   const kmNumero = Number(km)
+
+   if(kmNumero > 100000){
+    ajusteKm = 0.15
+   }
+
+   else if(kmNumero > 70000){
+    ajusteKm = 0.10
+   }
+
+   else if(kmNumero > 40000){
+    ajusteKm = 0.05
+   }
+
+  }
+
+  const precioKm =
+   precioInternet - (precioInternet * ajusteKm)
+
+  /*
+  4 APLICAR DESCUENTO ADMIN
   */
 
   const descuentoValor =
-   precioInternet * (descuento/100)
+   precioKm * (descuento / 100)
 
   const precioFinal =
-   Math.round(precioInternet - descuentoValor)
+   Math.round(precioKm - descuentoValor)
 
   /*
-  4 GUARDAR COTIZACION
+  5 GUARDAR COTIZACION
   */
 
   const cotizacion = {
 
-   ...req.body,
+   marca,
+   modelo,
+   version,
+   anio,
+   km,
 
    precioBase:precioInternet,
    descuentoPorcentaje:descuento,
