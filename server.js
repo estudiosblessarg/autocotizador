@@ -4,7 +4,29 @@ const path = require("path")
 
 const authRoutes = require("./src/routes/auth.routes")
 
+const { actualizarSiNecesario } = require("./services/precios.service")
+
 const app = express()
+
+async function iniciarSistema(){
+
+ try{
+
+  console.log("Inicializando precios ACARA...")
+
+  await actualizarSiNecesario()
+
+  console.log("Precios cargados")
+
+ }catch(err){
+
+  console.error("Error cargando precios:",err)
+
+ }
+
+}
+
+iniciarSistema()
 
 // ======================
 // MIDDLEWARE
