@@ -21,6 +21,73 @@ async function prepararCarpetas(){
 }
 
 /*
+UNIR CSV POR PREFIJO
+*/
+async function unirCSVs(){
+
+ const archivos = await fs.readdir(PDF_DIR)
+
+ const csvFiles =
+  archivos.filter(f => f.endsWith(".csv"))
+
+ const grupos = {}
+
+ for(const file of csvFiles){
+
+  const prefijo =
+   file.split("_")[0]
+
+  if(!grupos[prefijo])
+   grupos[prefijo] = []
+
+  grupos[prefijo].push(file)
+
+ }
+
+ const archivosFinales = []
+
+ for(const prefijo in grupos){
+
+  const lista = grupos[prefijo]
+
+  if(lista.length === 1){
+
+   archivosFinales.push(
+    path.join(PDF_DIR,lista[0])
+   )
+
+   continue
+
+  }
+
+  const merged =
+   path.join(PDF_DIR,`_merged_${prefijo}.csv`)
+
+  const write =
+   fs.createWriteStream(merged)
+
+  for(const file of lista){
+
+   const data =
+    await fs.readFile(
+     path.join(PDF_DIR,file)
+    )
+
+   write.write(data)
+
+  }
+
+  write.end()
+
+  archivosFinales.push(merged)
+
+ }
+
+ return archivosFinales
+
+}
+
+/*
 LIMPIAR PRECIO
 */
 function limpiarPrecio(str){
@@ -113,7 +180,7 @@ function detectarAuto(linea){
 }
 
 /*
-PROCESAR UN CSV
+PROCESAR CSV
 */
 async function procesarCSV(csvPath){
 
@@ -173,7 +240,7 @@ async function procesarCSV(csvPath){
 
      if(operaciones >= 450){
 
-      batch.commit()
+      await batch.commit()
       batch = db.batch()
       operaciones = 0
 
@@ -189,7 +256,7 @@ async function procesarCSV(csvPath){
     if(operaciones > 0)
      await batch.commit()
 
-    console.log("Autos cargados desde archivo:",total)
+    console.log("Autos cargados:",total)
 
     resolve()
 
@@ -201,40 +268,22 @@ async function procesarCSV(csvPath){
 }
 
 /*
-PROCESAR TODOS LOS CSV
-*/
-async function procesarTodosLosCSV(){
-
- const archivos =
-  await fs.readdir(PDF_DIR)
-
- const csvFiles =
-  archivos.filter(f => f.endsWith(".csv"))
-
- if(csvFiles.length === 0)
-  throw new Error("No hay archivos CSV en /pdfs")
-
- console.log("CSV encontrados:",csvFiles.length)
-
- for(const archivo of csvFiles){
-
-  const ruta =
-   path.join(PDF_DIR,archivo)
-
-  await procesarCSV(ruta)
-
- }
-
-}
-
-/*
-PIPELINE
+PROCESAR ARCHIVOS
 */
 async function procesarArchivo(){
 
  await prepararCarpetas()
 
- await procesarTodosLosCSV()
+ const archivos =
+  await unirCSVs()
+
+ console.log("Archivos a procesar:",archivos.length)
+
+ for(const archivo of archivos){
+
+  await procesarCSV(archivo)
+
+ }
 
 }
 
