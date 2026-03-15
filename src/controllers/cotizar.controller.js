@@ -1,7 +1,7 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
-const pdf = require("pdf-parse")
+const pdfParse = require("pdf-parse")
 
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
@@ -44,7 +44,7 @@ async function procesarPDF(){
 
  const dataBuffer = await fs.readFile(PDF_PATH)
 
- const data = await pdf(dataBuffer)
+ const data = await pdfParse(dataBuffer)
 
  const lineas = data.text.split("\n")
 
