@@ -6,8 +6,10 @@ const PDFParser = require("pdf2json")
 const PDF_DIR = path.join(__dirname,"../pdfs")
 const PDF_PATH = path.join(PDF_DIR,"acara_precios.pdf")
 
+const USD_TO_ARS = 1500
+
 const MARCAS_VALIDAS = [
-"FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
+"ALFA","FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
 "RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
 "KIA","HYUNDAI","MERCEDES-BENZ","BMW","AUDI"
 ]
@@ -54,74 +56,81 @@ function parsePDF(filePath){
 }
 
 /*
-LIMPIAR PRECIO
+CONVERTIR PRECIO USD -> ARS
 */
-function limpiarPrecio(texto){
+function convertirPrecioUSD(texto){
 
  if(!texto) return null
 
  const limpio =
   texto.replace(/\./g,"")
-       .replace(/,/g,"")
-       .replace(/[^0-9]/g,"")
+       .replace(",",".")
+       .replace(/[^0-9.]/g,"")
 
- const numero = Number(limpio)
+ const usd = Number(limpio)
 
- if(!numero || numero < 1000000) return null
+ if(!usd || usd < 1000) return null
 
- return numero
+ const ars = Math.round(usd * USD_TO_ARS)
+
+ return {
+  usd,
+  ars
+ }
+
+}
+
+/*
+DETECTAR PRECIO USD
+*/
+function extraerPrecio(linea){
+
+ const match =
+  linea.match(/\d{1,3}(\.\d{3})*,\d{2}/)
+
+ if(!match) return null
+
+ return convertirPrecioUSD(match[0])
 
 }
 
 /*
 DETECTAR AUTO
 */
-function detectarLineaAuto(linea){
+function detectarAuto(linea){
 
- const matchPrecio =
-  linea.match(/(\d{1,3}(\.\d{3})+)/g)
+ if(!linea.includes("u$s"))
+  return null
 
- if(!matchPrecio) return null
-
- const precio = limpiarPrecio(matchPrecio.pop())
+ const precio = extraerPrecio(linea)
 
  if(!precio) return null
 
- const matchAnio =
-  linea.match(/\b(19|20)\d{2}\b/)
+ const texto =
+  linea.split("u$s")[0].trim()
 
- if(!matchAnio) return null
+ const partes =
+  texto.split(/\s+/)
 
- const anio = Number(matchAnio[0])
-
- const partes = linea.trim().split(/\s+/)
+ if(partes.length < 2)
+  return null
 
  const marca = partes[0]
 
  if(!MARCAS_VALIDAS.includes(marca))
   return null
 
- const resto =
-  linea.replace(marca,"")
-       .replace(matchAnio[0],"")
-       .replace(matchPrecio[0],"")
-       .trim()
-
- const tokens = resto.split(/\s+/)
-
- if(tokens.length === 0) return null
-
- const modelo = tokens[0]
+ const modelo = partes[1]
 
  const version =
-  tokens.slice(1).join(" ")
+  partes.slice(2).join(" ")
 
  return {
   marca,
   modelo,
   version,
-  anio,
-  precio
+  precioUSD:precio.usd,
+  precioARS:precio.ars
  }
 
 }
@@ -132,7 +141,7 @@ PROCESAR PDF
 async function procesarPDF(){
 
  if(!await fs.pathExists(PDF_PATH)){
-  throw new Error("No se encontró el PDF en /data/pdfs/acara.pdf")
+  throw new Error("No se encontró el PDF en /pdfs/acara_precios.pdf")
  }
 
  console.log("Leyendo PDF ACARA...")
@@ -147,14 +156,20 @@ async function procesarPDF(){
 
  for(const linea of lineas){
 
-  const auto = detectarLineaAuto(linea)
+  const auto = detectarAuto(linea)
 
   if(!auto) continue
 
-  const {marca,modelo,version,anio,precio} = auto
+  const {
+   marca,
+   modelo,
+   version,
+   precioUSD,
+   precioARS
+  } = auto
 
   const id =
-  `${marca}_${modelo}_${version}_${anio}`
+  `${marca}_${modelo}_${version}`
    .toLowerCase()
    .replace(/\s+/g,"_")
    .replace(/[^a-z0-9_]/g,"")
@@ -166,8 +181,9 @@ async function procesarPDF(){
    marca,
    modelo,
    version,
-   anio,
-   precio,
+   precio_usd:precioUSD,
+   precio_ars:precioARS,
+   conversion:USD_TO_ARS,
    fuente:"ACARA",
    createdAt:new Date()
   })
