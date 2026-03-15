@@ -18,15 +18,20 @@ const MARCAS_VALIDAS = [
 ]
 
 /*
-IMPORT CORRECTO DE pdf-parse
+IMPORT SEGURO DE pdf-parse
 */
 async function parsePDF(buffer){
 
- const module = await import("pdf-parse")
+ const mod = await import("pdf-parse")
 
- const parser =
-  module.default ||
-  module
+ let parser = mod
+
+ if(mod.default) parser = mod.default
+ if(parser.default) parser = parser.default
+
+ if(typeof parser !== "function"){
+  throw new Error("pdf-parse no exporta una función válida")
+ }
 
  return parser(buffer)
 
@@ -138,7 +143,6 @@ async function procesarPDF(){
 
  let batch = db.batch()
  let operaciones = 0
-
  let total = 0
 
  for(const linea of lineas){
