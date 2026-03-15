@@ -1,7 +1,6 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
-const pdfParse = require("pdf-parse")
 
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
@@ -18,6 +17,24 @@ const MARCAS_VALIDAS = [
 "KIA","HYUNDAI","MERCEDES-BENZ","BMW","AUDI"
 ]
 
+/*
+IMPORT CORRECTO DE pdf-parse
+*/
+async function parsePDF(buffer){
+
+ const module = await import("pdf-parse")
+
+ const parser =
+  module.default ||
+  module
+
+ return parser(buffer)
+
+}
+
+/*
+DESCARGAR PDF
+*/
 async function descargarPDF(){
 
  await fs.ensureDir(PDF_DIR)
@@ -35,12 +52,9 @@ async function descargarPDF(){
 
 }
 
-async function parsePDF(buffer){
-
- return pdfParse(buffer)
-
-}
-
+/*
+LIMPIAR PRECIO
+*/
 function limpiarPrecio(texto){
 
  if(!texto) return null
@@ -58,6 +72,9 @@ function limpiarPrecio(texto){
 
 }
 
+/*
+DETECTAR AUTO
+*/
 function detectarLineaAuto(linea){
 
  const matchPrecio =
@@ -108,6 +125,9 @@ function detectarLineaAuto(linea){
 
 }
 
+/*
+PROCESAR PDF
+*/
 async function procesarPDF(){
 
  const buffer = await fs.readFile(PDF_PATH)
@@ -171,6 +191,9 @@ async function procesarPDF(){
 
 }
 
+/*
+ACTUALIZAR SI NECESARIO
+*/
 async function actualizarSiNecesario(){
 
  const doc =
