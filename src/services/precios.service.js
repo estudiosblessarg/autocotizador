@@ -19,7 +19,7 @@ const MARCAS_VALIDAS = [
 ]
 
 /*
-PARSEAR PDF CON pdf2json
+PARSEAR PDF
 */
 function parsePDF(filePath){
 
@@ -27,9 +27,9 @@ function parsePDF(filePath){
 
   const pdfParser = new PDFParser()
 
-  pdfParser.on("pdfParser_dataError", err =>
+  pdfParser.on("pdfParser_dataError", err => {
    reject(err)
-  )
+  })
 
   pdfParser.on("pdfParser_dataReady", pdfData => {
 
@@ -60,22 +60,32 @@ function parsePDF(filePath){
 }
 
 /*
-DESCARGAR PDF
+DESCARGAR PDF (VALIDANDO QUE SEA PDF REAL)
 */
 async function descargarPDF(){
 
  await fs.ensureDir(PDF_DIR)
 
- const res = await fetch(PDF_URL)
+ const res = await fetch(PDF_URL,{
+  headers:{
+   "User-Agent":"Mozilla/5.0"
+  }
+ })
 
  if(!res.ok)
   throw new Error("Error descargando PDF")
 
- const buffer = await res.arrayBuffer()
+ const buffer = Buffer.from(await res.arrayBuffer())
 
- await fs.writeFile(PDF_PATH,Buffer.from(buffer))
+ const header = buffer.toString("utf8",0,4)
 
- console.log("PDF descargado")
+ if(header !== "%PDF"){
+  throw new Error("ACARA devolvió HTML en lugar de PDF")
+ }
+
+ await fs.writeFile(PDF_PATH,buffer)
+
+ console.log("PDF descargado correctamente")
 
 }
 
@@ -120,7 +130,7 @@ function detectarLineaAuto(linea){
 
  const anio = Number(matchAnio[0])
 
- const partes = linea.split(" ")
+ const partes = linea.trim().split(/\s+/)
 
  const marca = partes[0]
 
@@ -156,6 +166,10 @@ function detectarLineaAuto(linea){
 PROCESAR PDF
 */
 async function procesarPDF(){
+
+ if(!await fs.pathExists(PDF_PATH)){
+  throw new Error("PDF no encontrado")
+ }
 
  const data = await parsePDF(PDF_PATH)
 
@@ -198,7 +212,6 @@ async function procesarPDF(){
   if(operaciones >= 450){
 
    await batch.commit()
-
    batch = db.batch()
    operaciones = 0
 
@@ -220,46 +233,54 @@ ACTUALIZAR SI NECESARIO
 */
 async function actualizarSiNecesario(){
 
- const doc =
-  await db.collection("config")
-   .doc("precios")
-   .get()
+ try{
 
- if(!doc.exists){
+  const doc =
+   await db.collection("config")
+    .doc("precios")
+    .get()
 
-  console.log("Base vacia, cargando ACARA")
+  if(!doc.exists){
 
-  await descargarPDF()
-  await procesarPDF()
+   console.log("Base vacia, cargando ACARA")
 
-  await db.collection("config")
-   .doc("precios")
-   .set({
-    updated:new Date()
-   })
+   await descargarPDF()
+   await procesarPDF()
 
-  return
+   await db.collection("config")
+    .doc("precios")
+    .set({
+     updated:new Date()
+    })
 
- }
+   return
 
- const last = doc.data().updated
+  }
 
- const dias =
-  (Date.now() - new Date(last))
-  /(1000*60*60*24)
+  const last = doc.data().updated
 
- if(dias > 30){
+  const dias =
+   (Date.now() - new Date(last))
+   /(1000*60*60*24)
 
-  console.log("Actualizando precios ACARA")
+  if(dias > 30){
 
-  await descargarPDF()
-  await procesarPDF()
+   console.log("Actualizando precios ACARA")
 
-  await db.collection("config")
-   .doc("precios")
-   .update({
-    updated:new Date()
-   })
+   await descargarPDF()
+   await procesarPDF()
+
+   await db.collection("config")
+    .doc("precios")
+    .update({
+     updated:new Date()
+    })
+
+  }
+
+ }catch(err){
+
+  console.error("Error cargando precios:",err)
 
  }
 
