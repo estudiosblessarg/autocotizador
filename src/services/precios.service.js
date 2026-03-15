@@ -10,7 +10,7 @@ const PDF_DIR = path.join(__dirname,"../data/pdfs")
 const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
 
 const PDF_URL =
-"https://acara.org.ar/wp-content/uploads/2024/01/listado-precios.pdf"
+"https://www.acara.org.ar/guia-oficial-de-precios"
 
 const MARCAS_VALIDAS = [
 "FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
