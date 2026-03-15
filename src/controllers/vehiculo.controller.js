@@ -2,46 +2,105 @@ const { db } = require("../config/firebase")
 
 /*
 ========================================
-BUSCAR EN INTERNET SI NO EXISTE
+CONFIG
 ========================================
 */
 
-async function buscarEnInternet(marca){
+const CACHE_LIMIT_MARCAS = 120
+const CACHE_LIMIT_MODELOS = 200
+const PARALLEL_BATCH = 20
 
- console.log("====================================")
- console.log("🌐 BUSQUEDA INTERNET INICIADA")
- console.log("Marca solicitada:",marca)
+
+/*
+========================================
+LISTA MARCAS REALES
+========================================
+*/
+
+const MARCAS_REALES = [
+"Toyota","Ford","Chevrolet","Nissan","Honda","BMW","Mercedes-Benz","Audi",
+"Volkswagen","Hyundai","Kia","Mazda","Subaru","Jeep","Ram","Dodge",
+"Lexus","Volvo","Peugeot","Renault","Fiat","Citroen","Mitsubishi",
+"Suzuki","Mini","Land Rover","Jaguar","Porsche","Ferrari","Lamborghini",
+"Maserati","Tesla","Genesis","Chery","BYD","Great Wall","Haval"
+]
+
+
+/*
+========================================
+LIMPIAR ID FIRESTORE
+========================================
+*/
+
+function limpiarID(texto){
+
+ return texto
+  .toLowerCase()
+  .replace(/\//g,"-")
+  .replace(/#/g,"")
+  .replace(/\./g,"")
+  .replace(/\[/g,"")
+  .replace(/\]/g,"")
+  .replace(/\s+/g,"-")
+  .trim()
+
+}
+
+
+/*
+========================================
+FILTRAR MARCAS VALIDAS
+========================================
+*/
+
+function filtrarMarcas(marcas){
+
+ const set = new Set()
+
+ for(const m of marcas){
+
+  if(MARCAS_REALES.includes(m)){
+   set.add(m)
+  }
+
+ }
+
+ return [...set]
+
+}
+
+
+/*
+========================================
+BUSCAR MODELOS INTERNET
+========================================
+*/
+
+async function buscarModelosInternet(marca){
+
+ console.log("🌐 Buscando modelos internet:",marca)
 
  try{
 
-  const url = "https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/"+marca+"?format=json"
-
-  console.log("URL API:",url)
+  const url = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${marca}?format=json`
 
   const res = await fetch(url)
 
-  console.log("Status API:",res.status)
-
   const data = await res.json()
 
-  console.log("Respuesta completa API:",data)
-
-  if(!data.Results){
-   console.log("⚠️ No hay resultados en la API")
-   return []
-  }
+  if(!data.Results) return []
 
   const modelos = data.Results.map(m=>m.Model_Name)
 
-  console.log("Modelos encontrados en internet:",modelos)
+  const unicos = [...new Set(modelos)]
 
-  console.log("====================================")
+  console.log("Modelos encontrados:",unicos.length)
 
-  return modelos
+  return unicos
 
  }catch(err){
 
-  console.error("❌ Error buscando en internet:",err)
+  console.error("❌ Error API modelos:",err)
 
   return []
 
@@ -58,77 +117,62 @@ GET MARCAS
 
 exports.getMarcas = async(req,res)=>{
 
- console.log("====================================")
  console.log("🚗 GET MARCAS")
 
  try{
 
   const snap = await db.collection("vehiculos").get()
 
-  console.log("Documentos encontrados en Firestore:",snap.size)
+  if(!snap.empty){
 
-  const marcas = snap.docs.map(d=>d.id)
+   const marcas = snap.docs.map(d=>d.data().nombre)
 
-  console.log("Marcas Firestore:",marcas)
-
-  if(marcas.length > 0){
-
-   console.log("Enviando marcas desde Firestore")
+   console.log("Marcas cache:",marcas.length)
 
    return res.json(marcas)
 
   }
 
-  /*
-  ====================================
-  SI FIRESTORE ESTA VACIO
-  BUSCAR EN INTERNET
-  ====================================
-  */
-
-  console.log("⚠️ Firestore vacío")
-  console.log("🌐 Buscando marcas en internet...")
+  console.log("⚠️ Cache vacío → consultando API")
 
   const url = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json"
 
-  console.log("URL API:",url)
-
   const response = await fetch(url)
-
-  console.log("Status API:",response.status)
 
   const data = await response.json()
 
-  console.log("Total marcas recibidas:",data.Results.length)
+  let marcasInternet = data.Results.map(m=>m.Make_Name)
 
-  const marcasInternet = data.Results.map(m=>m.Make_Name)
+  marcasInternet = filtrarMarcas(marcasInternet)
 
-  console.log("Primeras 20 marcas:",marcasInternet.slice(0,20))
+  console.log("Marcas filtradas:",marcasInternet)
 
   /*
-  ====================================
-  GUARDAR EN FIRESTORE
-  ====================================
+  GUARDAR CACHE
   */
 
-  for(const marca of marcasInternet.slice(0,200)){
+  const batch = db.batch()
 
-   console.log("Guardando marca:",marca)
+  marcasInternet.slice(0,CACHE_LIMIT_MARCAS).forEach(m=>{
 
-   await db
-    .collection("vehiculos")
-    .doc(marca)
-    .set({created:true})
+   const id = limpiarID(m)
 
-  }
+   const ref = db.collection("vehiculos").doc(id)
 
-  console.log("Marcas enviadas al frontend:",marcasInternet.length)
+   batch.set(ref,{
+    nombre:m,
+    created:Date.now()
+   })
+
+  })
+
+  await batch.commit()
 
   res.json(marcasInternet)
 
  }catch(err){
 
-  console.error("❌ Error obteniendo marcas:",err)
+  console.error(err)
 
   res.status(500).json({
    error:"error obteniendo marcas"
@@ -138,6 +182,7 @@ exports.getMarcas = async(req,res)=>{
 
 }
 
+
 /*
 ========================================
 GET MODELOS
@@ -146,74 +191,86 @@ GET MODELOS
 
 exports.getModelos = async(req,res)=>{
 
- console.log("====================================")
  console.log("🚗 GET MODELOS")
 
  try{
 
   const {marca} = req.params
 
-  console.log("Marca solicitada:",marca)
+  const marcaID = limpiarID(marca)
 
   const snap = await db
    .collection("vehiculos")
-   .doc(marca)
+   .doc(marcaID)
    .collection("modelos")
    .get()
 
-  console.log("Modelos encontrados en Firestore:",snap.size)
-
   if(!snap.empty){
 
-   const modelos = snap.docs.map(d=>d.id)
+   const modelos = snap.docs.map(d=>d.data().nombre)
 
-   console.log("Modelos enviados al frontend:",modelos)
+   console.log("Modelos cache:",modelos.length)
 
    return res.json(modelos)
 
   }
 
-  /*
-  ========================================
-  SI NO EXISTE BUSCAR EN INTERNET
-  ========================================
-  */
+  console.log("⚠️ Cache vacío modelos")
 
-  console.log("⚠️ No hay modelos en Firestore")
-  console.log("🌐 Buscando modelos en internet...")
-
-  const modelosInternet = await buscarEnInternet(marca)
-
-  console.log("Modelos obtenidos de internet:",modelosInternet)
+  const modelosInternet = await buscarModelosInternet(marca)
 
   /*
-  ========================================
-  GUARDAR EN FIRESTORE
-  ========================================
+  EVITAR DUPLICADOS
   */
 
-  for(const modelo of modelosInternet){
+  const modelos = [...new Set(modelosInternet)]
 
-   console.log("Guardando modelo en Firestore:",modelo)
+  console.log("Modelos únicos:",modelos.length)
 
-   await db
+  /*
+  GUARDADO PARALELO OPTIMIZADO
+  */
+
+  let batch = db.batch()
+  let count = 0
+
+  for(const modelo of modelos.slice(0,CACHE_LIMIT_MODELOS)){
+
+   const modeloID = limpiarID(modelo)
+
+   const ref = db
     .collection("vehiculos")
-    .doc(marca)
+    .doc(marcaID)
     .collection("modelos")
-    .doc(modelo)
-    .set({created:true})
+    .doc(modeloID)
+
+   batch.set(ref,{
+    nombre:modelo,
+    created:Date.now()
+   })
+
+   count++
+
+   if(count % PARALLEL_BATCH === 0){
+
+    await batch.commit()
+    batch = db.batch()
+
+   }
 
   }
 
-  console.log("Modelos enviados al frontend:",modelosInternet)
+  await batch.commit()
 
-  res.json(modelosInternet)
+  res.json(modelos)
 
  }catch(err){
 
-  console.error("❌ Error obteniendo modelos:",err)
+  console.error(err)
 
-  res.status(500).json({error:"error obteniendo modelos"})
+  res.status(500).json({
+   error:"error obteniendo modelos"
+  })
 
  }
 
@@ -228,37 +285,32 @@ GET VERSIONES
 
 exports.getVersiones = async(req,res)=>{
 
- console.log("====================================")
- console.log("🚗 GET VERSIONES")
-
  try{
 
   const {marca,modelo} = req.params
 
-  console.log("Marca:",marca)
-  console.log("Modelo:",modelo)
+  const marcaID = limpiarID(marca)
+  const modeloID = limpiarID(modelo)
 
   const snap = await db
    .collection("vehiculos")
-   .doc(marca)
+   .doc(marcaID)
    .collection("modelos")
-   .doc(modelo)
+   .doc(modeloID)
    .collection("versiones")
    .get()
 
-  console.log("Versiones encontradas:",snap.size)
-
-  const versiones = snap.docs.map(d=>d.id)
-
-  console.log("Versiones enviadas al frontend:",versiones)
+  const versiones = snap.docs.map(d=>d.data().nombre)
 
   res.json(versiones)
 
  }catch(err){
 
-  console.error("❌ Error versiones:",err)
+  console.error(err)
 
-  res.status(500).json({error:"error versiones"})
+  res.status(500).json({
+   error:"error versiones"
+  })
 
  }
 
@@ -273,47 +325,34 @@ GET AÑOS
 
 exports.getAnios = async(req,res)=>{
 
- console.log("====================================")
- console.log("🚗 GET AÑOS")
-
  try{
 
   const {marca,modelo,version} = req.params
 
-  console.log("Marca:",marca)
-  console.log("Modelo:",modelo)
-  console.log("Version:",version)
+  const marcaID = limpiarID(marca)
+  const modeloID = limpiarID(modelo)
+  const versionID = limpiarID(version)
 
   const doc = await db
    .collection("vehiculos")
-   .doc(marca)
+   .doc(marcaID)
    .collection("modelos")
-   .doc(modelo)
+   .doc(modeloID)
    .collection("versiones")
-   .doc(version)
+   .doc(versionID)
    .get()
 
-  if(!doc.exists){
+  if(!doc.exists) return res.json([])
 
-   console.log("⚠️ Documento no existe en Firestore")
-
-   return res.json([])
-
-  }
-
-  const data = doc.data()
-
-  console.log("Datos documento:",data)
-
-  console.log("Años enviados al frontend:",data.anios)
-
-  res.json(data.anios || [])
+  res.json(doc.data().anios || [])
 
  }catch(err){
 
-  console.error("❌ Error años:",err)
+  console.error(err)
 
-  res.status(500).json({error:"error años"})
+  res.status(500).json({
+   error:"error años"
+  })
 
  }
 
