@@ -1,6 +1,7 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
+const pdfParse = require("pdf-parse")
 
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
@@ -11,24 +12,11 @@ const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
 const PDF_URL =
 "https://acara.org.ar/wp-content/uploads/2024/01/listado-precios.pdf"
 
-const MARCAS_VALIDAS=[
+const MARCAS_VALIDAS = [
 "FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
 "RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
 "KIA","HYUNDAI","MERCEDES-BENZ","BMW","AUDI"
 ]
-
-async function parsePDF(buffer){
-
- const module = await import("pdf-parse")
-
- const parser =
-  module.default?.default ||
-  module.default ||
-  module
-
- return parser(buffer)
-
-}
 
 async function descargarPDF(){
 
@@ -43,6 +31,81 @@ async function descargarPDF(){
 
  await fs.writeFile(PDF_PATH,Buffer.from(buffer))
 
+ console.log("PDF descargado")
+
+}
+
+async function parsePDF(buffer){
+
+ return pdfParse(buffer)
+
+}
+
+function limpiarPrecio(texto){
+
+ if(!texto) return null
+
+ const limpio =
+  texto.replace(/\./g,"")
+       .replace(/,/g,"")
+       .replace(/[^0-9]/g,"")
+
+ const numero = Number(limpio)
+
+ if(!numero || numero < 1000000) return null
+
+ return numero
+
+}
+
+function detectarLineaAuto(linea){
+
+ const matchPrecio =
+  linea.match(/(\d{1,3}(\.\d{3})+)/g)
+
+ if(!matchPrecio) return null
+
+ const precio = limpiarPrecio(matchPrecio.pop())
+
+ if(!precio) return null
+
+ const matchAnio =
+  linea.match(/\b(19|20)\d{2}\b/)
+
+ if(!matchAnio) return null
+
+ const anio = Number(matchAnio[0])
+
+ const partes = linea.split(" ")
+
+ const marca = partes[0]
+
+ if(!MARCAS_VALIDAS.includes(marca))
+  return null
+
+ const resto =
+  linea.replace(marca,"")
+       .replace(matchAnio[0],"")
+       .replace(matchPrecio[0],"")
+       .trim()
+
+ const tokens = resto.split(/\s+/)
+
+ if(tokens.length === 0) return null
+
+ const modelo = tokens[0]
+
+ const version =
+  tokens.slice(1).join(" ")
+
+ return {
+  marca,
+  modelo,
+  version,
+  anio,
+  precio
+ }
+
 }
 
 async function procesarPDF(){
@@ -51,77 +114,73 @@ async function procesarPDF(){
 
  const data = await parsePDF(buffer)
 
- const lineas=data.text.split("\n")
+ const lineas = data.text.split("\n")
 
- let batch=db.batch()
- let ops=0
+ let batch = db.batch()
+ let operaciones = 0
+
+ let total = 0
 
  for(const linea of lineas){
 
-  const partes=linea.trim().split(/\s+/)
+  const auto = detectarLineaAuto(linea)
 
-  if(partes.length<5) continue
+  if(!auto) continue
 
-  const marca=partes[0]
+  const {marca,modelo,version,anio,precio} = auto
 
-  if(!MARCAS_VALIDAS.includes(marca)) continue
-
-  const precio=
-   Number(partes[partes.length-1].replace(/\./g,""))
-
-  const anio=
-   Number(partes[partes.length-2])
-
-  if(!precio || anio<1990 || anio>2030) continue
-
-  const modelo=partes[1]
-
-  const version=
-   partes.slice(2,partes.length-2).join(" ")
-
-  const id=
+  const id =
   `${marca}_${modelo}_${version}_${anio}`
    .toLowerCase()
-   .replace(/\s/g,"_")
+   .replace(/\s+/g,"_")
+   .replace(/[^a-z0-9_]/g,"")
 
-  const ref=db.collection("precios").doc(id)
+  const ref =
+   db.collection("precios").doc(id)
 
   batch.set(ref,{
    marca,
    modelo,
    version,
    anio,
-   precio
+   precio,
+   fuente:"ACARA",
+   createdAt:new Date()
   })
 
-  ops++
+  operaciones++
+  total++
 
-  if(ops===450){
+  if(operaciones >= 450){
 
    await batch.commit()
-   batch=db.batch()
-   ops=0
+
+   batch = db.batch()
+   operaciones = 0
 
   }
 
  }
 
- if(ops>0) await batch.commit()
+ if(operaciones > 0)
+  await batch.commit()
 
  await fs.remove(PDF_PATH)
 
- console.log("ACARA cargado")
+ console.log("Autos cargados:",total)
 
 }
 
 async function actualizarSiNecesario(){
 
- const config=
+ const doc =
   await db.collection("config")
    .doc("precios")
    .get()
 
- if(!config.exists){
+ if(!doc.exists){
+
+  console.log("Base vacia, cargando ACARA")
 
   await descargarPDF()
   await procesarPDF()
@@ -133,14 +192,18 @@ async function actualizarSiNecesario(){
    })
 
   return
+
  }
 
- const last=config.data().updated
+ const last = doc.data().updated
 
- const dias=
-  (Date.now()-new Date(last))/(1000*60*60*24)
+ const dias =
+  (Date.now() - new Date(last))
+  /(1000*60*60*24)
 
- if(dias>30){
+ if(dias > 30){
+
+  console.log("Actualizando precios ACARA")
 
   await descargarPDF()
   await procesarPDF()
@@ -155,6 +218,6 @@ async function actualizarSiNecesario(){
 
 }
 
-module.exports={
+module.exports = {
  actualizarSiNecesario
 }
