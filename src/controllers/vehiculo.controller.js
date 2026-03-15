@@ -1,7 +1,7 @@
 const { db } = require("../config/firebase")
 
 const fetch = (...args) =>
- import("node-fetch").then(({default: fetch}) => fetch(...args))
+ import("node-fetch").then(({ default: fetch }) => fetch(...args))
 
 
 /*
@@ -26,7 +26,7 @@ const MARCAS_REALES = [
 
 
 /*
-LIMPIAR IDS
+LIMPIAR IDS FIRESTORE
 */
 
 function limpiarID(texto){
@@ -44,12 +44,12 @@ function limpiarID(texto){
 
 
 /*
-FILTRAR MARCAS
+FILTRAR MARCAS VALIDAS
 */
 
 function filtrarMarcas(lista){
 
- const permitidas = MARCAS_REALES.map(m=>m.toLowerCase())
+ const permitidas = MARCAS_REALES.map(m => m.toLowerCase())
 
  return lista.filter(m =>
   permitidas.includes(m.toLowerCase())
@@ -59,14 +59,14 @@ function filtrarMarcas(lista){
 
 
 /*
-API MODELOS
+BUSCAR MODELOS EN API
 */
 
 async function buscarModelosInternet(marca){
 
  try{
 
-  console.log("🌐 API modelos:",marca)
+  console.log("🌐 API modelos:", marca)
 
   const url =
   `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(marca)}?format=json`
@@ -85,18 +85,18 @@ async function buscarModelosInternet(marca){
   }
 
   const modelos = data.Results
-   .map(m=>m.Model_Name)
+   .map(m => m.Model_Name)
    .filter(Boolean)
 
   const unicos = [...new Set(modelos)]
 
-  console.log("Modelos encontrados:",unicos.length)
+  console.log("Modelos encontrados:", unicos.length)
 
   return unicos
 
  }catch(err){
 
-  console.error("Error API modelos",err)
+  console.error("❌ Error API modelos:", err)
 
   return []
 
@@ -109,7 +109,7 @@ async function buscarModelosInternet(marca){
 GET MARCAS
 */
 
-exports.getMarcas = async(req,res)=>{
+exports.getMarcas = async (req,res)=>{
 
  try{
 
@@ -117,21 +117,21 @@ exports.getMarcas = async(req,res)=>{
 
   const snap = await db.collection("vehiculos").get()
 
-  console.log("Firestore docs:",snap.size)
+  console.log("Firestore docs:", snap.size)
 
   if(!snap.empty){
 
    const marcas = snap.docs
-    .map(d=>d.data().nombre)
+    .map(d => d.data().nombre)
     .filter(Boolean)
 
-   console.log("Marcas desde cache:",marcas.length)
+   console.log("Marcas desde cache:", marcas.length)
 
    return res.json(marcas)
 
   }
 
-  console.log("⚠️ Firestore vacío → API")
+  console.log("⚠️ Firestore vacío → consultando API")
 
   const url =
   "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json"
@@ -144,26 +144,26 @@ exports.getMarcas = async(req,res)=>{
 
   const data = await response.json()
 
-  console.log("API marcas:",data.Results.length)
+  console.log("API marcas:", data.Results.length)
 
   let marcas = data.Results
-   .map(m=>m.Make_Name)
+   .map(m => m.Make_Name)
    .filter(Boolean)
 
   marcas = filtrarMarcas(marcas)
 
-  console.log("Marcas filtradas:",marcas)
+  console.log("Marcas filtradas:", marcas)
 
   const batch = db.batch()
 
-  marcas.slice(0,CACHE_LIMIT_MARCAS).forEach(m=>{
+  marcas.slice(0,CACHE_LIMIT_MARCAS).forEach(marca => {
 
-   const id = limpiarID(m)
+   const id = limpiarID(marca)
 
    const ref = db.collection("vehiculos").doc(id)
 
    batch.set(ref,{
-    nombre:m,
+    nombre:marca,
     created:Date.now()
    })
 
@@ -177,7 +177,7 @@ exports.getMarcas = async(req,res)=>{
 
  }catch(err){
 
-  console.error("ERROR MARCAS:",err)
+  console.error("ERROR MARCAS:", err)
 
   res.status(500).json({
    error:"error obteniendo marcas"
@@ -192,13 +192,13 @@ exports.getMarcas = async(req,res)=>{
 GET MODELOS
 */
 
-exports.getModelos = async(req,res)=>{
+exports.getModelos = async (req,res)=>{
 
  try{
 
   const {marca} = req.params
 
-  console.log("🚗 GET MODELOS:",marca)
+  console.log("🚗 GET MODELOS:", marca)
 
   const marcaID = limpiarID(marca)
 
@@ -208,19 +208,19 @@ exports.getModelos = async(req,res)=>{
    .collection("modelos")
    .get()
 
-  console.log("Modelos cache:",snap.size)
+  console.log("Modelos cache:", snap.size)
 
   if(!snap.empty){
 
    const modelos = snap.docs
-    .map(d=>d.data().nombre)
+    .map(d => d.data().nombre)
     .filter(Boolean)
 
    return res.json(modelos)
 
   }
 
-  console.log("⚠️ modelos no cache")
+  console.log("⚠️ modelos no encontrados en cache")
 
   const modelosInternet = await buscarModelosInternet(marca)
 
@@ -228,7 +228,7 @@ exports.getModelos = async(req,res)=>{
 
   const batch = db.batch()
 
-  modelos.forEach(modelo=>{
+  modelos.forEach(modelo => {
 
    const modeloID = limpiarID(modelo)
 
@@ -253,7 +253,7 @@ exports.getModelos = async(req,res)=>{
 
  }catch(err){
 
-  console.error("ERROR MODELOS:",err)
+  console.error("ERROR MODELOS:", err)
 
   res.status(500).json({
    error:"error obteniendo modelos"
@@ -261,7 +261,10 @@ exports.getModelos = async(req,res)=>{
 
  }
 
- /*
+}
+
+
+/*
 GET VERSIONES
 */
 
@@ -271,7 +274,7 @@ exports.getVersiones = async (req,res)=>{
 
   const {marca,modelo} = req.params
 
-  console.log("🚗 GET VERSIONES:",marca,modelo)
+  console.log("🚗 GET VERSIONES:", marca, modelo)
 
   const marcaID = limpiarID(marca)
   const modeloID = limpiarID(modelo)
@@ -284,21 +287,21 @@ exports.getVersiones = async (req,res)=>{
    .collection("versiones")
    .get()
 
-  console.log("Versiones encontradas:",snap.size)
+  console.log("Versiones encontradas:", snap.size)
 
   if(snap.empty){
    return res.json([])
   }
 
   const versiones = snap.docs
-   .map(d=>d.data().nombre)
+   .map(d => d.data().nombre)
    .filter(Boolean)
 
   res.json(versiones)
 
  }catch(err){
 
-  console.error("ERROR VERSIONES:",err)
+  console.error("ERROR VERSIONES:", err)
 
   res.status(500).json({
    error:"error obteniendo versiones"
@@ -319,7 +322,7 @@ exports.getAnios = async (req,res)=>{
 
   const {marca,modelo,version} = req.params
 
-  console.log("🚗 GET AÑOS:",marca,modelo,version)
+  console.log("🚗 GET AÑOS:", marca, modelo, version)
 
   const marcaID = limpiarID(marca)
   const modeloID = limpiarID(modelo)
@@ -344,20 +347,18 @@ exports.getAnios = async (req,res)=>{
 
   const data = doc.data()
 
-  console.log("Años encontrados:",data.anios)
+  console.log("Años encontrados:", data.anios)
 
   res.json(data.anios || [])
 
  }catch(err){
 
-  console.error("ERROR AÑOS:",err)
+  console.error("ERROR AÑOS:", err)
 
   res.status(500).json({
    error:"error obteniendo años"
   })
 
  }
-
-}
 
 }
