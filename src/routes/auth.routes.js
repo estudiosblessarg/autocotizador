@@ -1,359 +1,56 @@
-const { db } = require("../config/firebase")
+const express = require("express")
+const router = express.Router()
 
-/*
-========================================
-CONFIG
-========================================
-*/
+const authController = require("../controllers/auth.controller")
+const cotizadorController = require("../controllers/cotizar.controller")
+const cotizacionController = require("../controllers/cotizacion.controller")
+const userController = require("../controllers/user.controller")
+const vehiculoController = require("../controllers/vehiculo.controller")
+const configController = require("../controllers/config.controller")
 
-const CACHE_LIMIT_MARCAS = 120
-const CACHE_LIMIT_MODELOS = 200
-const PARALLEL_BATCH = 20
+// ======================
+// =================
+// AUTH
+// ======================
+// =================
 
+router.post("/login",authController.login)
+router.post("/register",authController.register)
+router.get("/users",userController.getUsers)
+router.put("/users/:id",userController.updateRole)
 
-/*
-========================================
-LISTA MARCAS REALES
-========================================
-*/
 
-const MARCAS_REALES = [
-"Toyota","Ford","Chevrolet","Nissan","Honda","BMW","Mercedes-Benz","Audi",
-"Volkswagen","Hyundai","Kia","Mazda","Subaru","Jeep","Ram","Dodge",
-"Lexus","Volvo","Peugeot","Renault","Fiat","Citroen","Mitsubishi",
-"Suzuki","Mini","Land Rover","Jaguar","Porsche","Ferrari","Lamborghini",
-"Maserati","Tesla","Genesis","Chery","BYD","Great Wall","Haval"
-]
+// ======================
+// COTIZADOR
+// ======================
 
+router.post("/cotizar",cotizadorController.cotizar)
 
-/*
-========================================
-LIMPIAR ID FIRESTORE
-========================================
-*/
 
-function limpiarID(texto){
+// ======================
+// COTIZACIONES ADMIN
+// ======================
 
- return texto
-  .toLowerCase()
-  .replace(/\//g,"-")
-  .replace(/#/g,"")
-  .replace(/\./g,"")
-  .replace(/\[/g,"")
-  .replace(/\]/g,"")
-  .replace(/\s+/g,"-")
-  .trim()
+router.get("/cotizaciones",cotizacionController.getAll)
+router.put("/cotizaciones/:id",cotizacionController.update)
+router.delete("/cotizaciones/:id",cotizacionController.delete)
 
-}
 
+// ======================
+// CONFIG
+// ======================
 
-/*
-========================================
-FILTRAR MARCAS VALIDAS
-========================================
-*/
+router.get("/km",configController.getKM)
+router.put("/km",configController.updateKM)
 
-function filtrarMarcas(marcas){
 
- const set = new Set()
+// ======================
+// VEHICULOS
+// ======================
 
- for(const m of marcas){
+router.get("/cotizador/marcas",vehiculoController.getMarcas)
+router.get("/cotizador/modelos/:marca",vehiculoController.getModelos)
+router.get("/cotizador/versiones/:marca/:modelo",vehiculoController.getVersiones)
+router.get("/cotizador/anios/:marca/:modelo/:version",vehiculoController.getAnios)
 
-  if(MARCAS_REALES.includes(m)){
-   set.add(m)
-  }
-
- }
-
- return [...set]
-
-}
-
-
-/*
-========================================
-BUSCAR MODELOS INTERNET
-========================================
-*/
-
-async function buscarModelosInternet(marca){
-
- console.log("🌐 Buscando modelos internet:",marca)
-
- try{
-
-  const url = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${marca}?format=json`
-
-  const res = await fetch(url)
-
-  const data = await res.json()
-
-  if(!data.Results) return []
-
-  const modelos = data.Results.map(m=>m.Model_Name)
-
-  const unicos = [...new Set(modelos)]
-
-  console.log("Modelos encontrados:",unicos.length)
-
-  return unicos
-
- }catch(err){
-
-  console.error("❌ Error API modelos:",err)
-
-  return []
-
- }
-
-}
-
-
-/*
-========================================
-GET MARCAS
-========================================
-*/
-
-exports.getMarcas = async(req,res)=>{
-
- console.log("🚗 GET MARCAS")
-
- try{
-
-  const snap = await db.collection("vehiculos").get()
-
-  if(!snap.empty){
-
-   const marcas = snap.docs.map(d=>d.data().nombre)
-
-   console.log("Marcas cache:",marcas.length)
-
-   return res.json(marcas)
-
-  }
-
-  console.log("⚠️ Cache vacío → consultando API")
-
-  const url = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json"
-
-  const response = await fetch(url)
-
-  const data = await response.json()
-
-  let marcasInternet = data.Results.map(m=>m.Make_Name)
-
-  marcasInternet = filtrarMarcas(marcasInternet)
-
-  console.log("Marcas filtradas:",marcasInternet)
-
-  /*
-  GUARDAR CACHE
-  */
-
-  const batch = db.batch()
-
-  marcasInternet.slice(0,CACHE_LIMIT_MARCAS).forEach(m=>{
-
-   const id = limpiarID(m)
-
-   const ref = db.collection("vehiculos").doc(id)
-
-   batch.set(ref,{
-    nombre:m,
-    created:Date.now()
-   })
-
-  })
-
-  await batch.commit()
-
-  res.json(marcasInternet)
-
- }catch(err){
-
-  console.error(err)
-
-  res.status(500).json({
-   error:"error obteniendo marcas"
-  })
-
- }
-
-}
-
-
-/*
-========================================
-GET MODELOS
-========================================
-*/
-
-exports.getModelos = async(req,res)=>{
-
- console.log("🚗 GET MODELOS")
-
- try{
-
-  const {marca} = req.params
-
-  const marcaID = limpiarID(marca)
-
-  const snap = await db
-   .collection("vehiculos")
-   .doc(marcaID)
-   .collection("modelos")
-   .get()
-
-  if(!snap.empty){
-
-   const modelos = snap.docs.map(d=>d.data().nombre)
-
-   console.log("Modelos cache:",modelos.length)
-
-   return res.json(modelos)
-
-  }
-
-  console.log("⚠️ Cache vacío modelos")
-
-  const modelosInternet = await buscarModelosInternet(marca)
-
-  /*
-  EVITAR DUPLICADOS
-  */
-
-  const modelos = [...new Set(modelosInternet)]
-
-  console.log("Modelos únicos:",modelos.length)
-
-  /*
-  GUARDADO PARALELO OPTIMIZADO
-  */
-
-  let batch = db.batch()
-  let count = 0
-
-  for(const modelo of modelos.slice(0,CACHE_LIMIT_MODELOS)){
-
-   const modeloID = limpiarID(modelo)
-
-   const ref = db
-    .collection("vehiculos")
-    .doc(marcaID)
-    .collection("modelos")
-    .doc(modeloID)
-
-   batch.set(ref,{
-    nombre:modelo,
-    created:Date.now()
-   })
-
-   count++
-
-   if(count % PARALLEL_BATCH === 0){
-
-    await batch.commit()
-    batch = db.batch()
-
-   }
-
-  }
-
-  await batch.commit()
-
-  res.json(modelos)
-
- }catch(err){
-
-  console.error(err)
-
-  res.status(500).json({
-   error:"error obteniendo modelos"
-  })
-
- }
-
-}
-
-
-/*
-========================================
-GET VERSIONES
-========================================
-*/
-
-exports.getVersiones = async(req,res)=>{
-
- try{
-
-  const {marca,modelo} = req.params
-
-  const marcaID = limpiarID(marca)
-  const modeloID = limpiarID(modelo)
-
-  const snap = await db
-   .collection("vehiculos")
-   .doc(marcaID)
-   .collection("modelos")
-   .doc(modeloID)
-   .collection("versiones")
-   .get()
-
-  const versiones = snap.docs.map(d=>d.data().nombre)
-
-  res.json(versiones)
-
- }catch(err){
-
-  console.error(err)
-
-  res.status(500).json({
-   error:"error versiones"
-  })
-
- }
-
-}
-
-
-/*
-========================================
-GET AÑOS
-========================================
-*/
-
-exports.getAnios = async(req,res)=>{
-
- try{
-
-  const {marca,modelo,version} = req.params
-
-  const marcaID = limpiarID(marca)
-  const modeloID = limpiarID(modelo)
-  const versionID = limpiarID(version)
-
-  const doc = await db
-   .collection("vehiculos")
-   .doc(marcaID)
-   .collection("modelos")
-   .doc(modeloID)
-   .collection("versiones")
-   .doc(versionID)
-   .get()
-
-  if(!doc.exists) return res.json([])
-
-  res.json(doc.data().anios || [])
-
- }catch(err){
-
-  console.error(err)
-
-  res.status(500).json({
-   error:"error años"
-  })
-
- }
-
-}
+module.exports = router
