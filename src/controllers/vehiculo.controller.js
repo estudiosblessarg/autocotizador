@@ -15,7 +15,7 @@ async function buscarEnInternet(marca,modelo){
 
   const res = await fetch(url)
   const data = await res.json()
-  const modelos = res.data.Results.map(m=>m.Model_Name
+  const modelos = res.data.Results.map(m=>m.Model_Name)
 
   return modelos
 
