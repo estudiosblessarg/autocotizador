@@ -50,7 +50,7 @@ async function procesarPDF(){
 
   const dataBuffer = await fs.readFile(PDF_PATH)
 
-  const data = await pdfParse(dataBuffer)
+  const data = await parsePDF(dataBuffer)
 
   const lineas = data.text.split("\n")
 
@@ -119,7 +119,6 @@ async function procesarPDF(){
  }
 
 }
-
 /*
 VERIFICAR MODELO OFICIAL
 */
