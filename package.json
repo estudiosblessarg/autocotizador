@@ -9,7 +9,7 @@
     "serverless-http": "^3.2.0",
     "fs-extra": "^11.3.4",
     "node-fetch": "^3.3.2",
-    "csv-parser": "^3.2.0"
+    "csv-parser": "^3.2.0",
     "pdfreader": "^3.0.8"
   },
   "description": "",
