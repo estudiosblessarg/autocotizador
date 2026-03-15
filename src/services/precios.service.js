@@ -4,7 +4,6 @@ const path = require("path")
 const csv = require("csv-parser")
 
 const PDF_DIR = path.join(__dirname,"../pdfs")
-const CSV_PATH = path.join(PDF_DIR,"acara_precios.csv")
 
 const USD_TO_ARS = 1500
 
@@ -62,7 +61,7 @@ function detectarMarca(texto){
 }
 
 /*
-DETECTAR AUTO DESDE TEXTO
+DETECTAR AUTO
 */
 function detectarAuto(linea){
 
@@ -114,14 +113,11 @@ function detectarAuto(linea){
 }
 
 /*
-PROCESAR CSV
+PROCESAR UN CSV
 */
-async function procesarCSV(){
+async function procesarCSV(csvPath){
 
- if(!await fs.pathExists(CSV_PATH))
-  throw new Error("No se encontró el CSV en /pdfs")
-
- console.log("Leyendo CSV ACARA...")
+ console.log("Procesando:",csvPath)
 
  return new Promise((resolve,reject)=>{
 
@@ -129,7 +125,7 @@ async function procesarCSV(){
   let operaciones = 0
   let total = 0
 
-  fs.createReadStream(CSV_PATH)
+  fs.createReadStream(csvPath)
    .pipe(csv())
    .on("data", async (row)=>{
 
@@ -177,7 +173,7 @@ async function procesarCSV(){
 
      if(operaciones >= 450){
 
-      await batch.commit()
+      batch.commit()
       batch = db.batch()
       operaciones = 0
 
@@ -193,7 +189,7 @@ async function procesarCSV(){
     if(operaciones > 0)
      await batch.commit()
 
-    console.log("Autos cargados:",total)
+    console.log("Autos cargados desde archivo:",total)
 
     resolve()
 
@@ -205,13 +201,40 @@ async function procesarCSV(){
 }
 
 /*
+PROCESAR TODOS LOS CSV
+*/
+async function procesarTodosLosCSV(){
+
+ const archivos =
+  await fs.readdir(PDF_DIR)
+
+ const csvFiles =
+  archivos.filter(f => f.endsWith(".csv"))
+
+ if(csvFiles.length === 0)
+  throw new Error("No hay archivos CSV en /pdfs")
+
+ console.log("CSV encontrados:",csvFiles.length)
+
+ for(const archivo of csvFiles){
+
+  const ruta =
+   path.join(PDF_DIR,archivo)
+
+  await procesarCSV(ruta)
+
+ }
+
+}
+
+/*
 PIPELINE
 */
 async function procesarArchivo(){
 
  await prepararCarpetas()
 
- await procesarCSV()
+ await procesarTodosLosCSV()
 
 }
 
