@@ -14,13 +14,7 @@ exports.register = async (req,res)=>{
 
   const { email,password,role } = req.body
 
-  // ======================
-  // VALIDATION
-  // ======================
-
   if(!email || !password){
-
-   console.warn("❌ Missing email or password")
 
    return res.status(400).json({
     success:false,
@@ -29,49 +23,39 @@ exports.register = async (req,res)=>{
 
   }
 
-  // ======================
-  // CHECK EXISTING USER
-  // ======================
+  // ======================================
+  // CREATE USER IN FIREBASE AUTH
+  // ======================================
 
-  console.log("🔎 Checking if user exists:",email)
+  console.log("🔥 Creating Firebase Auth user")
 
-  const existing = await db
-   .collection("users")
-   .where("email","==",email)
-   .limit(1)
-   .get()
+  const userRecord = await admin.auth().createUser({
+   email:email,
+   password:password
+  })
 
-  if(!existing.empty){
+  console.log("✅ Firebase Auth user created:",userRecord.uid)
 
-   console.warn("⚠ User already exists")
+  // ======================================
+  // SAVE USER IN FIRESTORE
+  // ======================================
 
-   return res.status(409).json({
-    success:false,
-    error:"usuario ya existe"
-   })
-
+  const userData = {
+   uid:userRecord.uid,
+   email:email,
+   role:role || "cotizador",
+   createdAt:admin.firestore.FieldValue.serverTimestamp()
   }
 
-  // ======================
-  // CREATE USER
-  // ======================
+  console.log("💾 Saving user in Firestore")
 
-  const user = {
-   email,
-   password,
-   role: role || "cotizador",
-   createdAt: admin.firestore.FieldValue.serverTimestamp()
-  }
+  await db.collection("users").doc(userRecord.uid).set(userData)
 
-  console.log("💾 Creating user in Firestore")
-
-  const ref = await db.collection("users").add(user)
-
-  console.log("✅ User created:",ref.id)
+  console.log("✅ User saved in Firestore")
 
   res.json({
    success:true,
-   id:ref.id
+   uid:userRecord.uid
   })
 
  }catch(err){
@@ -101,69 +85,52 @@ exports.login = async(req,res)=>{
 
  try{
 
-  const { email,password } = req.body
+  const { email } = req.body
 
-  // ======================
-  // VALIDATION
-  // ======================
-
-  if(!email || !password){
-
-   console.warn("❌ Missing credentials")
+  if(!email){
 
    return res.status(400).json({
     success:false,
-    error:"email y password requeridos"
+    error:"email requerido"
    })
 
   }
 
-  console.log("🔎 Searching user:",email)
+  // ======================================
+  // GET USER FROM FIREBASE AUTH
+  // ======================================
 
-  // ======================
-  // QUERY USER
-  // ======================
+  console.log("🔥 Searching Firebase Auth user")
 
-  const snap = await db
-   .collection("users")
-   .where("email","==",email)
-   .limit(1)
-   .get()
+  const userRecord = await admin.auth().getUserByEmail(email)
 
-  if(snap.empty){
+  console.log("✅ Firebase user found:",userRecord.uid)
 
-   console.warn("❌ User not found")
+  // ======================================
+  // GET USER DATA FROM FIRESTORE
+  // ======================================
 
-   return res.status(401).json({
+  console.log("🔥 Searching Firestore user")
+
+  const doc = await db.collection("users").doc(userRecord.uid).get()
+
+  if(!doc.exists){
+
+   return res.status(404).json({
     success:false,
-    error:"credenciales invalidas"
+    error:"usuario no encontrado en base de datos"
    })
 
   }
 
-  const doc = snap.docs[0]
   const user = doc.data()
 
-  // ======================
-  // PASSWORD CHECK
-  // ======================
-
-  if(user.password !== password){
-
-   console.warn("❌ Password mismatch")
-
-   return res.status(401).json({
-    success:false,
-    error:"credenciales invalidas"
-   })
-
-  }
-
-  console.log("✅ Login success")
+  console.log("✅ Firestore user found")
   console.log("ROLE:",user.role)
 
   res.json({
    success:true,
+   uid:userRecord.uid,
    role:user.role
   })
 
