@@ -3,8 +3,8 @@ const fs = require("fs-extra")
 const path = require("path")
 const PDFParser = require("pdf2json")
 
-const PDF_DIR = path.join(__dirname,"../data/pdfs")
-const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
+const PDF_DIR = path.join(__dirname,"../pdfs")
+const PDF_PATH = path.join(PDF_DIR,"acara_precios.pdf")
 
 const MARCAS_VALIDAS = [
 "FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
