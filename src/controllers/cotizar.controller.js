@@ -16,7 +16,7 @@ const PDF_DIR = path.join(__dirname,"../data/pdfs")
 const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
 
 /*
-DESCARGAR PDF ACARA
+DESCARGAR PDF
 */
 
 async function descargarPDF(){
@@ -41,7 +41,7 @@ async function descargarPDF(){
 }
 
 /*
-PARSEAR PDF
+PROCESAR PDF ACARA
 */
 
 async function procesarPDF(){
@@ -65,11 +65,9 @@ async function procesarPDF(){
 
    const marca = partes[0]
    const modelo = partes[1]
-   const version = partes[2]
-   const anio = partes[3]
-   const precio = partes[4]
-
-   if(!marca || !modelo || !anio || !precio) continue
+   const version = partes.slice(2,partes.length-2).join(" ")
+   const anio = partes[partes.length-2]
+   const precio = partes[partes.length-1]
 
    const precioNumero =
     Number(precio.replace(/\./g,""))
@@ -95,10 +93,6 @@ async function procesarPDF(){
 
    operaciones++
 
-   /*
-   FIRESTORE MAX 500 OPERACIONES
-   */
-
    if(operaciones === 450){
 
     await batch.commit()
@@ -114,7 +108,7 @@ async function procesarPDF(){
    await batch.commit()
   }
 
-  console.log("PDF procesado y datos guardados")
+  console.log("PDF procesado correctamente")
 
   await fs.remove(PDF_PATH)
 
@@ -127,27 +121,54 @@ async function procesarPDF(){
 }
 
 /*
-BUSCAR PRECIO EN DB
+VERIFICAR MODELO OFICIAL
 */
 
-async function buscarPrecioDB(marca,modelo,version,anio){
+async function validarVehiculoOficial(marca,modelo,anio){
 
- const id =
-  `${marca}_${modelo}_${version}_${anio}`
-   .toLowerCase()
-   .replace(/\s/g,"_")
+ const snapshot =
+  await db.collection("precios")
+   .where("marca","==",marca)
+   .where("modelo","==",modelo)
+   .where("anio","==",Number(anio))
+   .limit(1)
+   .get()
 
- const doc =
-  await db.collection("precios").doc(id).get()
-
- if(!doc.exists) return null
-
- return doc.data().precio
+ return !snapshot.empty
 
 }
 
 /*
-BUSCAR PRECIO INTERNET (fallback)
+PROMEDIAR PRECIOS POR MODELO Y AÑO
+IGNORA VERSION
+*/
+
+async function obtenerPrecioPromedio(marca,modelo,anio){
+
+ const snapshot =
+  await db.collection("precios")
+   .where("marca","==",marca)
+   .where("modelo","==",modelo)
+   .where("anio","==",Number(anio))
+   .get()
+
+ if(snapshot.empty) return null
+
+ const precios = []
+
+ snapshot.forEach(doc=>{
+  precios.push(doc.data().precio)
+ })
+
+ const promedio =
+  precios.reduce((a,b)=>a+b,0) / precios.length
+
+ return Math.round(promedio)
+
+}
+
+/*
+BUSCAR PRECIO INTERNET
 */
 
 async function buscarPrecioVehiculo(marca,modelo,anio){
@@ -192,20 +213,12 @@ CONFIG ADMIN
 
 async function obtenerConfigKM(){
 
- try{
+ const doc =
+  await db.collection("config").doc("km").get()
 
-  const doc =
-   await db.collection("config").doc("km").get()
+ if(!doc.exists) return {descuento:0}
 
-  if(!doc.exists) return {descuento:0}
-
-  return doc.data()
-
- }catch(err){
-
-  return {descuento:0}
-
- }
+ return doc.data()
 
 }
 
@@ -219,33 +232,50 @@ exports.cotizar = async(req,res)=>{
 
   const {marca,modelo,version,anio,km} = req.body
 
-  let precio =
-   await buscarPrecioDB(marca,modelo,version,anio)
-
   /*
-  SI NO EXISTE EN DB → PDF
+  VALIDAR VEHICULO OFICIAL
   */
 
-  if(!precio){
+  let esOficial =
+   await validarVehiculoOficial(marca,modelo,anio)
 
-   console.log("Precio no encontrado en DB, descargando PDF")
+  /*
+  SI NO EXISTE → CARGAR PDF
+  */
+
+  if(!esOficial){
+
+   console.log("Modelo no encontrado, cargando PDF ACARA")
 
    await descargarPDF()
-
    await procesarPDF()
 
-   precio =
-    await buscarPrecioDB(marca,modelo,version,anio)
+   esOficial =
+    await validarVehiculoOficial(marca,modelo,anio)
+
+  }
+
+  if(!esOficial){
+
+   return res.status(400).json({
+    success:false,
+    error:"Vehiculo no reconocido oficialmente"
+   })
 
   }
 
   /*
-  SI SIGUE SIN PRECIO → INTERNET
+  OBTENER PRECIO PROMEDIO
+  */
+
+  let precio =
+   await obtenerPrecioPromedio(marca,modelo,anio)
+
+  /*
+  FALLBACK INTERNET
   */
 
   if(!precio){
-
-   console.log("Buscando precio en internet")
 
    precio =
     await buscarPrecioVehiculo(marca,modelo,anio)
@@ -256,7 +286,7 @@ exports.cotizar = async(req,res)=>{
 
    return res.status(400).json({
     success:false,
-    error:"No se pudo obtener precio"
+    error:"No se pudo calcular precio"
    })
 
   }
@@ -290,6 +320,16 @@ exports.cotizar = async(req,res)=>{
 
   const precioFinal =
    Math.round(precioKm - descuentoValor)
+
+  /*
+  LOG CONSOLA
+  */
+
+  console.log("----- COTIZACION -----")
+  console.log("MARCA:",marca)
+  console.log("MODELO:",modelo)
+  console.log("AÑO:",anio)
+  console.log("PRECIO CALCULADO:",precioFinal)
 
   /*
   GUARDAR COTIZACION
