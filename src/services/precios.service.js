@@ -3,14 +3,8 @@ const fs = require("fs-extra")
 const path = require("path")
 const PDFParser = require("pdf2json")
 
-const fetch = (...args) =>
- import("node-fetch").then(({ default: fetch }) => fetch(...args))
-
 const PDF_DIR = path.join(__dirname,"../data/pdfs")
 const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
-
-const PDF_URL =
-"https://www.acara.org.ar/guia-oficial-de-precios"
 
 const MARCAS_VALIDAS = [
 "FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
@@ -56,36 +50,6 @@ function parsePDF(filePath){
   pdfParser.loadPDF(filePath)
 
  })
-
-}
-
-/*
-DESCARGAR PDF (VALIDANDO QUE SEA PDF REAL)
-*/
-async function descargarPDF(){
-
- await fs.ensureDir(PDF_DIR)
-
- const res = await fetch(PDF_URL,{
-  headers:{
-   "User-Agent":"Mozilla/5.0"
-  }
- })
-
- if(!res.ok)
-  throw new Error("Error descargando PDF")
-
- const buffer = Buffer.from(await res.arrayBuffer())
-
- const header = buffer.toString("utf8",0,4)
-
- if(header !== "%PDF"){
-  throw new Error("ACARA devolvió HTML en lugar de PDF")
- }
-
- await fs.writeFile(PDF_PATH,buffer)
-
- console.log("PDF descargado correctamente")
 
 }
 
@@ -168,8 +132,10 @@ PROCESAR PDF
 async function procesarPDF(){
 
  if(!await fs.pathExists(PDF_PATH)){
-  throw new Error("PDF no encontrado")
+  throw new Error("No se encontró el PDF en /data/pdfs/acara.pdf")
  }
+
+ console.log("Leyendo PDF ACARA...")
 
  const data = await parsePDF(PDF_PATH)
 
@@ -222,8 +188,6 @@ async function procesarPDF(){
  if(operaciones > 0)
   await batch.commit()
 
- await fs.remove(PDF_PATH)
-
  console.log("Autos cargados:",total)
 
 }
@@ -242,9 +206,8 @@ async function actualizarSiNecesario(){
 
   if(!doc.exists){
 
-   console.log("Base vacia, cargando ACARA")
+   console.log("Base vacía, procesando PDF ACARA")
 
-   await descargarPDF()
    await procesarPDF()
 
    await db.collection("config")
@@ -265,9 +228,8 @@ async function actualizarSiNecesario(){
 
   if(dias > 30){
 
-   console.log("Actualizando precios ACARA")
+   console.log("Actualizando precios ACARA desde PDF")
 
-   await descargarPDF()
    await procesarPDF()
 
    await db.collection("config")
