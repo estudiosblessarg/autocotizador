@@ -1,12 +1,123 @@
 const { db } = require("../config/firebase")
+const fs = require("fs-extra")
+const path = require("path")
+const pdf = require("pdf-parse")
 
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
 
+/*
+CARPETA PDF
+*/
+
+const PDF_DIR = path.join(__dirname,"../data/pdfs")
+const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
 
 /*
-BUSCAR PRECIO EN INTERNET
-(MercadoLibre)
+DESCARGAR PDF ACARA
+*/
+
+async function descargarPDF(){
+
+ const url =
+ "https://acara.org.ar/wp-content/uploads/2024/01/listado-precios.pdf"
+
+ await fs.ensureDir(PDF_DIR)
+
+ const res = await fetch(url)
+
+ if(!res.ok){
+  throw new Error("No se pudo descargar PDF")
+ }
+
+ const buffer = await res.arrayBuffer()
+
+ await fs.writeFile(PDF_PATH,Buffer.from(buffer))
+
+}
+
+/*
+PARSEAR PDF
+*/
+
+async function procesarPDF(){
+
+ const dataBuffer = await fs.readFile(PDF_PATH)
+
+ const data = await pdf(dataBuffer)
+
+ const lineas = data.text.split("\n")
+
+ const batch = db.batch()
+
+ for(const linea of lineas){
+
+  const partes = linea.trim().split(/\s+/)
+
+  if(partes.length < 5) continue
+
+  const marca = partes[0]
+  const modelo = partes[1]
+  const version = partes[2]
+  const anio = partes[3]
+  const precio = partes[4]
+
+  if(!marca || !modelo || !anio || !precio) continue
+
+  const precioNumero =
+   Number(precio.replace(/\./g,""))
+
+  if(!precioNumero) continue
+
+  const id =
+   `${marca}_${modelo}_${version}_${anio}`
+    .toLowerCase()
+    .replace(/\s/g,"_")
+
+  const ref = db.collection("precios").doc(id)
+
+  batch.set(ref,{
+
+   marca,
+   modelo,
+   version,
+   anio:Number(anio),
+   precio:precioNumero,
+   fuente:"ACARA",
+   createdAt:new Date()
+
+  })
+
+ }
+
+ await batch.commit()
+
+ await fs.remove(PDF_PATH)
+
+}
+
+/*
+BUSCAR PRECIO EN DB
+*/
+
+async function buscarPrecioDB(marca,modelo,version,anio){
+
+ const id =
+  `${marca}_${modelo}_${version}_${anio}`
+   .toLowerCase()
+   .replace(/\s/g,"_")
+
+ const doc =
+  await db.collection("precios").doc(id).get()
+
+ if(!doc.exists) return null
+
+ return doc.data().precio
+
+}
+
+/*
+BUSCAR PRECIO INTERNET (fallback)
 */
 
 async function buscarPrecioVehiculo(marca,modelo,anio){
@@ -14,31 +125,21 @@ async function buscarPrecioVehiculo(marca,modelo,anio){
  try{
 
   const query =
-   `${marca} ${modelo} ${anio}`.replace(/\s/g,"-")
+   `${marca} ${modelo} ${anio}`
 
   const url =
-   `https://api.mercadolibre.com/sites/MLA/search?q=${query}&category=MLA1744&limit=10`
+  `https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(query)}&category=MLA1744&limit=10`
 
   const res = await fetch(url)
 
-  if(!res.ok){
-   throw new Error("Error API MercadoLibre")
-  }
-
   const data = await res.json()
 
-  if(!data.results || data.results.length === 0){
-   return null
-  }
+  if(!data.results) return null
 
   const precios =
-   data.results
-    .map(a => a.price)
-    .filter(Boolean)
+   data.results.map(v=>v.price).filter(Boolean)
 
-  if(precios.length === 0){
-   return null
-  }
+  if(!precios.length) return null
 
   const promedio =
    precios.reduce((a,b)=>a+b,0) / precios.length
@@ -47,80 +148,77 @@ async function buscarPrecioVehiculo(marca,modelo,anio){
 
  }catch(err){
 
-  console.log("Error buscando precio:",err)
-
   return null
 
  }
 
 }
 
-
 /*
-OBTENER CONFIG ADMIN
+CONFIG ADMIN
 */
 
 async function obtenerConfigKM(){
 
- try{
+ const doc =
+  await db.collection("config").doc("km").get()
 
-  const doc =
-   await db.collection("config").doc("km").get()
+ if(!doc.exists) return {descuento:0}
 
-  if(!doc.exists){
-   return {descuento:0}
-  }
-
-  return doc.data()
-
- }catch(err){
-
-  console.log("Error config km:",err)
-
-  return {descuento:0}
-
- }
+ return doc.data()
 
 }
-
 
 /*
 COTIZAR
 */
 
-exports.cotizar = async (req,res)=>{
+exports.cotizar = async(req,res)=>{
 
  try{
 
   const {marca,modelo,version,anio,km} = req.body
 
-  if(!marca || !modelo || !anio){
-
-   return res.status(400).json({
-    success:false,
-    error:"Datos incompletos"
-   })
-
-  }
+  let precio =
+   await buscarPrecioDB(marca,modelo,version,anio)
 
   /*
-  1 BUSCAR PRECIO
+  SI NO EXISTE EN DB → PDF
   */
 
-  const precioInternet =
-   await buscarPrecioVehiculo(marca,modelo,anio)
+  if(!precio){
 
-  if(!precioInternet){
+   await descargarPDF()
+
+   await procesarPDF()
+
+   precio =
+    await buscarPrecioDB(marca,modelo,version,anio)
+
+  }
+
+  /*
+  SI SIGUE SIN PRECIO → INTERNET
+  */
+
+  if(!precio){
+
+   precio =
+    await buscarPrecioVehiculo(marca,modelo,anio)
+
+  }
+
+  if(!precio){
 
    return res.status(400).json({
     success:false,
-    error:"No se pudo obtener precio del vehiculo"
+    error:"No se pudo obtener precio"
    })
 
   }
 
   /*
-  2 CONFIG ADMIN
+  CONFIG ADMIN
   */
 
   const config = await obtenerConfigKM()
@@ -129,44 +227,28 @@ exports.cotizar = async (req,res)=>{
    Number(config.descuento || 0)
 
   /*
-  3 AJUSTE POR KM
+  AJUSTE KM
   */
 
   let ajusteKm = 0
 
-  if(km){
+  const kmNumero = Number(km)
 
-   const kmNumero = Number(km)
-
-   if(kmNumero > 100000){
-    ajusteKm = 0.15
-   }
-
-   else if(kmNumero > 70000){
-    ajusteKm = 0.10
-   }
-
-   else if(kmNumero > 40000){
-    ajusteKm = 0.05
-   }
-
-  }
+  if(kmNumero > 100000) ajusteKm = 0.15
+  else if(kmNumero > 70000) ajusteKm = 0.10
+  else if(kmNumero > 40000) ajusteKm = 0.05
 
   const precioKm =
-   precioInternet - (precioInternet * ajusteKm)
-
-  /*
-  4 APLICAR DESCUENTO ADMIN
-  */
+   precio - (precio * ajusteKm)
 
   const descuentoValor =
-   precioKm * (descuento / 100)
+   precioKm * (descuento/100)
 
   const precioFinal =
    Math.round(precioKm - descuentoValor)
 
   /*
-  5 GUARDAR COTIZACION
+  GUARDAR COTIZACION
   */
 
   const cotizacion = {
@@ -177,7 +259,7 @@ exports.cotizar = async (req,res)=>{
    anio,
    km,
 
-   precioBase:precioInternet,
+   precioBase:precio,
    descuentoPorcentaje:descuento,
    precioFinal,
 
@@ -192,8 +274,7 @@ exports.cotizar = async (req,res)=>{
 
    success:true,
    id:ref.id,
-
-   precioBase:precioInternet,
+   precioBase:precio,
    descuento,
    precioFinal
 
@@ -201,7 +282,7 @@ exports.cotizar = async (req,res)=>{
 
  }catch(error){
 
-  console.log("Error cotizacion:",error)
+  console.log(error)
 
   res.status(500).json({
    success:false,
