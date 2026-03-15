@@ -24,7 +24,7 @@ router.put("/users/:id",userController.updateRole)
 // COTIZADOR
 // ======================
 
-router.post("cotizador/cotizar",cotizadorController.cotizar)
+router.post("/cotizador/cotizar",cotizadorController.cotizar)
 
 
 // ======================
