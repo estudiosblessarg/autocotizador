@@ -5,79 +5,31 @@ const path = require("path")
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
 
-/*
-PDF CONFIG
-*/
-
 const PDF_DIR = path.join(__dirname,"../data/pdfs")
 const PDF_PATH = path.join(PDF_DIR,"acara.pdf")
 
 const PDF_URL =
 "https://acara.org.ar/wp-content/uploads/2024/01/listado-precios.pdf"
 
-/*
-MARCAS VALIDAS
-*/
-
 const MARCAS_VALIDAS = [
-"FORD",
-"CHEVROLET",
-"VOLKSWAGEN",
-"TOYOTA",
-"HONDA",
-"NISSAN",
-"RENAULT",
-"PEUGEOT",
-"FIAT",
-"CITROEN",
-"JEEP",
-"RAM",
-"KIA",
-"HYUNDAI",
-"MERCEDES-BENZ",
-"BMW",
-"AUDI"
+"FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
+"RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
+"KIA","HYUNDAI","MERCEDES-BENZ","BMW","AUDI"
 ]
 
 /*
-PARSE PDF
+PDF PARSER SEGURO
 */
-
 async function parsePDF(buffer){
 
- const pdf = await import("pdf-parse")
- const parser = pdf.default || pdf
+ const module = await import("pdf-parse")
+
+ const parser =
+  module.default?.default ||
+  module.default ||
+  module
 
  return parser(buffer)
-
-}
-
-/*
-VERIFICAR SI HAY QUE ACTUALIZAR
-*/
-
-async function necesitaActualizar(){
-
- const doc =
-  await db.collection("config")
-   .doc("precios")
-   .get()
-
- if(!doc.exists) return true
-
- const data = doc.data()
-
- if(!data.ultimaActualizacion) return true
-
- const ultima =
-  new Date(data.ultimaActualizacion)
-
- const ahora = new Date()
-
- const dias =
-  (ahora - ultima) / (1000*60*60*24)
-
- return dias > 30
 
 }
 
@@ -91,9 +43,8 @@ async function descargarPDF(){
 
  const res = await fetch(PDF_URL)
 
- if(!res.ok){
+ if(!res.ok)
   throw new Error("Error descargando PDF")
- }
 
  const buffer = await res.arrayBuffer()
 
@@ -152,15 +103,12 @@ async function procesarPDF(){
    db.collection("precios").doc(id)
 
   batch.set(ref,{
-
    marca,
    modelo,
    version,
    anio,
    precio,
-   fuente:"ACARA",
    createdAt:new Date()
-
   })
 
   operaciones++
@@ -176,15 +124,8 @@ async function procesarPDF(){
 
  }
 
- if(operaciones > 0){
+ if(operaciones>0)
   await batch.commit()
- }
-
- await db.collection("config")
-  .doc("precios")
-  .set({
-   ultimaActualizacion:new Date()
-  })
 
  await fs.remove(PDF_PATH)
 
@@ -193,24 +134,19 @@ async function procesarPDF(){
 }
 
 /*
-ACTUALIZAR PRECIOS
+VERIFICAR ACTUALIZACION
 */
 
 async function verificarActualizarPrecios(){
 
  const snapshot =
   await db.collection("precios")
-   .limit(1)
-   .get()
+  .limit(1)
+  .get()
 
- const vacia = snapshot.empty
+ if(snapshot.empty){
 
- const actualizar =
-  await necesitaActualizar()
-
- if(vacia || actualizar){
-
-  console.log("Actualizando base de precios")
+  console.log("DB vacia → cargando PDF")
 
   await descargarPDF()
   await procesarPDF()
@@ -220,47 +156,162 @@ async function verificarActualizarPrecios(){
 }
 
 /*
-PRECIO PROMEDIO (ignora version)
+GENERAR COLECCIONES DERIVADAS
 */
 
-async function obtenerPrecioPromedio(marca,modelo,anio){
+async function generarColecciones(){
+
+ const snap =
+  await db.collection("precios").get()
+
+ const marcas = new Set()
+ const modelos = {}
+ const versiones = {}
+ const anios = {}
+
+ snap.forEach(doc=>{
+
+  const d = doc.data()
+
+  marcas.add(d.marca)
+
+  if(!modelos[d.marca])
+   modelos[d.marca] = new Set()
+
+  modelos[d.marca].add(d.modelo)
+
+  const keyModelo =
+   `${d.marca}_${d.modelo}`
+
+  if(!versiones[keyModelo])
+   versiones[keyModelo] = new Set()
+
+  versiones[keyModelo].add(d.version)
+
+  const keyVersion =
+   `${d.marca}_${d.modelo}_${d.version}`
+
+  if(!anios[keyVersion])
+   anios[keyVersion] = new Set()
+
+  anios[keyVersion].add(d.anio)
+
+ })
+
+ /*
+ GUARDAR MARCAS
+ */
+
+ const batch = db.batch()
+
+ marcas.forEach(m=>{
+
+  const ref =
+   db.collection("marcas").doc(m)
+
+  batch.set(ref,{nombre:m})
+
+ })
+
+ await batch.commit()
+
+}
+
+/*
+ENDPOINT MARCAS
+*/
+
+exports.obtenerMarcas = async(req,res)=>{
+
+ await verificarActualizarPrecios()
+
+ const snap =
+  await db.collection("precios")
+  .select("marca")
+  .get()
+
+ const marcas = new Set()
+
+ snap.forEach(doc=>{
+  marcas.add(doc.data().marca)
+ })
+
+ res.json([...marcas].sort())
+
+}
+
+/*
+ENDPOINT MODELOS
+*/
+
+exports.obtenerModelos = async(req,res)=>{
+
+ const {marca} = req.params
+
+ const snap =
+  await db.collection("precios")
+   .where("marca","==",marca)
+   .select("modelo")
+   .get()
+
+ const modelos = new Set()
+
+ snap.forEach(doc=>{
+  modelos.add(doc.data().modelo)
+ })
+
+ res.json([...modelos].sort())
+
+}
+
+/*
+ENDPOINT VERSIONES
+*/
+
+exports.obtenerVersiones = async(req,res)=>{
+
+ const {marca,modelo} = req.params
 
  const snap =
   await db.collection("precios")
    .where("marca","==",marca)
    .where("modelo","==",modelo)
-   .where("anio","==",Number(anio))
+   .select("version")
    .get()
 
- if(snap.empty) return null
-
- const precios = []
+ const versiones = new Set()
 
  snap.forEach(doc=>{
-  precios.push(doc.data().precio)
+  versiones.add(doc.data().version)
  })
 
- const promedio =
-  precios.reduce((a,b)=>a+b,0) / precios.length
-
- return Math.round(promedio)
+ res.json([...versiones].sort())
 
 }
 
 /*
-CONFIG KM
+ENDPOINT AÑOS
 */
 
-async function obtenerConfigKM(){
+exports.obtenerAnios = async(req,res)=>{
 
- const doc =
-  await db.collection("config")
-   .doc("km")
+ const {marca,modelo,version} = req.params
+
+ const snap =
+  await db.collection("precios")
+   .where("marca","==",marca)
+   .where("modelo","==",modelo)
+   .where("version","==",version)
+   .select("anio")
    .get()
 
- if(!doc.exists) return {descuento:0}
+ const anios = new Set()
 
- return doc.data()
+ snap.forEach(doc=>{
+  anios.add(doc.data().anio)
+ })
+
+ res.json([...anios].sort((a,b)=>b-a))
 
 }
 
@@ -274,69 +325,43 @@ exports.cotizar = async(req,res)=>{
 
   const {marca,modelo,anio,km} = req.body
 
-  await verificarActualizarPrecios()
+  const snap =
+   await db.collection("precios")
+    .where("marca","==",marca)
+    .where("modelo","==",modelo)
+    .where("anio","==",Number(anio))
+    .get()
 
-  const precio =
-   await obtenerPrecioPromedio(marca,modelo,anio)
-
-  if(!precio){
-
+  if(snap.empty)
    return res.status(400).json({
     success:false,
     error:"Modelo no encontrado"
    })
 
-  }
+  const precios=[]
 
-  const config =
-   await obtenerConfigKM()
+  snap.forEach(doc=>{
+   precios.push(doc.data().precio)
+  })
 
-  const descuento =
-   Number(config.descuento || 0)
+  const promedio =
+   precios.reduce((a,b)=>a+b,0)/precios.length
 
-  let ajusteKm = 0
+  let ajusteKm=0
 
-  if(km > 100000) ajusteKm = 0.15
-  else if(km > 70000) ajusteKm = 0.10
-  else if(km > 40000) ajusteKm = 0.05
-
-  const precioKm =
-   precio - (precio * ajusteKm)
+  if(km>100000) ajusteKm=0.15
+  else if(km>70000) ajusteKm=0.10
+  else if(km>40000) ajusteKm=0.05
 
   const precioFinal =
-   Math.round(
-    precioKm - (precioKm * (descuento/100))
-   )
+   Math.round(promedio - (promedio*ajusteKm))
 
-  console.log("------ COTIZACION ------")
-  console.log("MARCA:",marca)
-  console.log("MODELO:",modelo)
-  console.log("AÑO:",anio)
-  console.log("PRECIO:",precioFinal)
-
-  const ref =
-   await db.collection("cotizaciones")
-    .add({
-
-     marca,
-     modelo,
-     anio,
-     km,
-
-     precioBase:precio,
-     precioFinal,
-
-     createdAt:new Date()
-
-    })
+  console.log("COTIZACION:",marca,modelo,anio,precioFinal)
 
   res.json({
-
    success:true,
-   id:ref.id,
-   precioBase:precio,
+   precioBase:promedio,
    precioFinal
-
   })
 
  }catch(err){
