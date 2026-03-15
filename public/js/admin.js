@@ -379,8 +379,3 @@ window.onload=()=>{
  setInterval(verificarRolAdmin,30000)
 
 }
-
-
- setInterval(verificarRolAdmin,30000)
-
-}
