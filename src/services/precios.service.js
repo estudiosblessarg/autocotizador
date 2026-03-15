@@ -1,62 +1,70 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
-const PDFParser = require("pdf2json")
+const Tabula = require("tabula-js")
+const csv = require("csv-parser")
 
-const PDF_DIR = path.join(__dirname,"../pdfs")
-const PDF_PATH = path.join(PDF_DIR,"acara_precios.pdf")
+const PDF_DIR = path.join(__dirname, "../pdfs")
+const DATA_DIR = path.join(__dirname, "../data")
+
+const PDF_PATH = path.join(PDF_DIR, "acara_precios.pdf")
+const CSV_PATH = path.join(DATA_DIR, "acara_autos.csv")
 
 const USD_TO_ARS = 1500
 
 const MARCAS_VALIDAS = [
-"ALFA","FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
-"RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
-"KIA","HYUNDAI","MERCEDES","BMW","AUDI"
+ "ALFA","FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
+ "RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
+ "KIA","HYUNDAI","MERCEDES","BMW","AUDI"
 ]
 
 /*
-PARSEAR PDF
+CREAR DIRECTORIOS
 */
-function parsePDF(filePath){
+async function prepararCarpetas(){
+
+ await fs.ensureDir(PDF_DIR)
+ await fs.ensureDir(DATA_DIR)
+
+}
+
+/*
+CONVERTIR PDF A CSV CON TABULA
+*/
+async function convertirPDFaCSV(){
+
+ console.log("Convirtiendo PDF a CSV con Tabula...")
 
  return new Promise((resolve,reject)=>{
 
-  const pdfParser = new PDFParser()
-
-  pdfParser.on("pdfParser_dataError", err => reject(err))
-
-  pdfParser.on("pdfParser_dataReady", pdfData => {
-
-   let texto = ""
-
-   pdfData.Pages.forEach(page => {
-
-    page.Texts.forEach(text => {
-
-     text.R.forEach(t => {
-      texto += decodeURIComponent(t.T) + " "
-     })
-
-    })
-
-    texto += "\n"
-
-   })
-
-   resolve(texto)
-
+  const tabula = new Tabula(PDF_PATH,{
+   pages:"all",
+   guess:true
   })
 
-  pdfParser.loadPDF(filePath)
+  const stream =
+   fs.createWriteStream(CSV_PATH)
+
+  tabula.streamCsv()
+   .pipe(stream)
+
+  stream.on("finish",()=>{
+   console.log("CSV generado")
+   resolve()
+  })
+
+  stream.on("error",reject)
 
  })
 
 }
 
 /*
-LIMPIAR USD
+LIMPIAR PRECIO
 */
-function limpiarUSD(str){
+function limpiarPrecio(str){
+
+ if(!str) return null
 
  const limpio =
   str.replace(/\./g,"")
@@ -73,142 +81,141 @@ function limpiarUSD(str){
 }
 
 /*
-DETECTAR PRECIO
+DETECTAR MARCA
 */
-function extraerPrecio(linea){
-
- const match =
-  linea.match(/\d{2,3}\.\d{3},\d{2}/)
-
- if(!match)
-  return null
-
- return limpiarUSD(match[0])
-
-}
-
-/*
-DETECTAR AUTO
-*/
-function detectarAuto(linea){
-
- const precioUSD = extraerPrecio(linea)
-
- if(!precioUSD)
-  return null
-
- let marcaDetectada = null
+function detectarMarca(texto){
 
  for(const marca of MARCAS_VALIDAS){
 
-  if(linea.startsWith(marca)){
-   marcaDetectada = marca
-   break
-  }
+  if(texto.startsWith(marca))
+   return marca
 
  }
 
- if(!marcaDetectada)
-  return null
-
- const texto =
-  linea.replace(marcaDetectada,"")
-       .replace(/\d{2,3}\.\d{3},\d{2}/,"")
-       .trim()
-
- const partes =
-  texto.split(/\s+/)
-
- if(partes.length < 1)
-  return null
-
- const modelo = partes[0]
-
- const version =
-  partes.slice(1).join(" ")
-
- const precioARS =
-  Math.round(precioUSD * USD_TO_ARS)
-
- return {
-  marca:marcaDetectada,
-  modelo,
-  version,
-  precioUSD,
-  precioARS
- }
+ return null
 
 }
 
 /*
-PROCESAR PDF
+PARSEAR CSV
+*/
+async function procesarCSV(){
+
+ return new Promise((resolve,reject)=>{
+
+  let batch = db.batch()
+  let operaciones = 0
+  let total = 0
+
+  fs.createReadStream(CSV_PATH)
+   .pipe(csv({ separator: "," }))
+   .on("data", async (row)=>{
+
+    try{
+
+     const valores =
+      Object.values(row)
+
+     const linea =
+      valores.join(" ")
+
+     const marca =
+      detectarMarca(linea)
+
+     if(!marca) return
+
+     const precioMatch =
+      linea.match(/\d{2,3}\.\d{3},\d{2}/)
+
+     if(!precioMatch) return
+
+     const precioUSD =
+      limpiarPrecio(precioMatch[0])
+
+     if(!precioUSD) return
+
+     const texto =
+      linea.replace(marca,"")
+           .replace(precioMatch[0],"")
+           .trim()
+
+     const partes =
+      texto.split(/\s+/)
+
+     const modelo =
+      partes[0]
+
+     const version =
+      partes.slice(1).join(" ")
+
+     const precioARS =
+      Math.round(precioUSD * USD_TO_ARS)
+
+     const id =
+      `${marca}_${modelo}_${version}`
+      .toLowerCase()
+      .replace(/\s+/g,"_")
+      .replace(/[^a-z0-9_]/g,"")
+
+     const ref =
+      db.collection("precios").doc(id)
+
+     batch.set(ref,{
+      marca,
+      modelo,
+      version,
+      precio_usd:precioUSD,
+      precio_ars:precioARS,
+      conversion:USD_TO_ARS,
+      fuente:"ACARA",
+      createdAt:new Date()
+     })
+
+     operaciones++
+     total++
+
+     if(operaciones >= 450){
+
+      await batch.commit()
+      batch = db.batch()
+      operaciones = 0
+
+     }
+
+    }catch(err){
+     console.error(err)
+    }
+
+   })
+   .on("end", async ()=>{
+
+    if(operaciones > 0)
+     await batch.commit()
+
+    console.log("Autos cargados:",total)
+
+    resolve()
+
+   })
+   .on("error",reject)
+
+ })
+
+}
+
+/*
+PIPELINE COMPLETO
 */
 async function procesarPDF(){
 
  if(!await fs.pathExists(PDF_PATH))
-  throw new Error("No se encontró el PDF")
+  throw new Error("No se encontró el PDF en /pdfs")
 
- console.log("Leyendo PDF ACARA...")
+ await prepararCarpetas()
 
- const texto = await parsePDF(PDF_PATH)
+ await convertirPDFaCSV()
 
- const lineas = texto.split("\n")
-
- let batch = db.batch()
- let operaciones = 0
- let total = 0
-
- for(const linea of lineas){
-
-  const auto = detectarAuto(linea)
-
-  if(!auto) continue
-
-  const {
-   marca,
-   modelo,
-   version,
-   precioUSD,
-   precioARS
-  } = auto
-
-  const id =
-   `${marca}_${modelo}_${version}`
-   .toLowerCase()
-   .replace(/\s+/g,"_")
-   .replace(/[^a-z0-9_]/g,"")
-
-  const ref =
-   db.collection("precios").doc(id)
-
-  batch.set(ref,{
-   marca,
-   modelo,
-   version,
-   precio_usd:precioUSD,
-   precio_ars:precioARS,
-   conversion:USD_TO_ARS,
-   fuente:"ACARA",
-   createdAt:new Date()
-  })
-
-  operaciones++
-  total++
-
-  if(operaciones >= 450){
-
-   await batch.commit()
-   batch = db.batch()
-   operaciones = 0
-
-  }
-
- }
-
- if(operaciones > 0)
-  await batch.commit()
-
- console.log("Autos cargados:",total)
+ await procesarCSV()
 
 }
 
