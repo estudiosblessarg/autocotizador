@@ -48,9 +48,9 @@ router.put("/km",configController.updateKM)
 // VEHICULOS
 // ======================
 
-router.get("/cotizador/marcas",vehiculoController.getMarcas)
-router.get("/cotizador/modelos/:marca",vehiculoController.getModelos)
-router.get("/cotizador/versiones/:marca/:modelo",vehiculoController.getVersiones)
-router.get("/cotizador/anios/:marca/:modelo/:version",vehiculoController.getAnios)
+router.get("/cotizador/marcas",vehiculoController.marcas)
+router.get("/cotizador/modelos/:marca",vehiculoController.modelos)
+router.get("/cotizador/versiones/:marca/:modelo",vehiculoController.versiones)
+router.get("/cotizador/anios/:marca/:modelo/:version",vehiculoController.anios)
 
 module.exports = router
