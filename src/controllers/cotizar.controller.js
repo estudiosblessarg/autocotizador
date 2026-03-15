@@ -1,7 +1,9 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
-const pdfParse = require("pdf-parse")
+
+let pdfModule = require("pdf-parse")
+const pdfParse = pdfModule.default || pdfModule
 
 const fetch = (...args) =>
  import("node-fetch").then(({ default: fetch }) => fetch(...args))
@@ -34,6 +36,8 @@ async function descargarPDF(){
 
  await fs.writeFile(PDF_PATH,Buffer.from(buffer))
 
+ console.log("PDF descargado")
+
 }
 
 /*
@@ -42,57 +46,83 @@ PARSEAR PDF
 
 async function procesarPDF(){
 
- const dataBuffer = await fs.readFile(PDF_PATH)
+ try{
 
- const data = await pdfParse(dataBuffer)
+  const dataBuffer = await fs.readFile(PDF_PATH)
 
- const lineas = data.text.split("\n")
+  const data = await pdfParse(dataBuffer)
 
- const batch = db.batch()
+  const lineas = data.text.split("\n")
 
- for(const linea of lineas){
+  let batch = db.batch()
+  let operaciones = 0
 
-  const partes = linea.trim().split(/\s+/)
+  for(const linea of lineas){
 
-  if(partes.length < 5) continue
+   const partes = linea.trim().split(/\s+/)
 
-  const marca = partes[0]
-  const modelo = partes[1]
-  const version = partes[2]
-  const anio = partes[3]
-  const precio = partes[4]
+   if(partes.length < 5) continue
 
-  if(!marca || !modelo || !anio || !precio) continue
+   const marca = partes[0]
+   const modelo = partes[1]
+   const version = partes[2]
+   const anio = partes[3]
+   const precio = partes[4]
 
-  const precioNumero =
-   Number(precio.replace(/\./g,""))
+   if(!marca || !modelo || !anio || !precio) continue
 
-  if(!precioNumero) continue
+   const precioNumero =
+    Number(precio.replace(/\./g,""))
 
-  const id =
-   `${marca}_${modelo}_${version}_${anio}`
-    .toLowerCase()
-    .replace(/\s/g,"_")
+   if(!precioNumero) continue
 
-  const ref = db.collection("precios").doc(id)
+   const id =
+    `${marca}_${modelo}_${version}_${anio}`
+     .toLowerCase()
+     .replace(/\s/g,"_")
 
-  batch.set(ref,{
+   const ref = db.collection("precios").doc(id)
 
-   marca,
-   modelo,
-   version,
-   anio:Number(anio),
-   precio:precioNumero,
-   fuente:"ACARA",
-   createdAt:new Date()
+   batch.set(ref,{
+    marca,
+    modelo,
+    version,
+    anio:Number(anio),
+    precio:precioNumero,
+    fuente:"ACARA",
+    createdAt:new Date()
+   })
 
-  })
+   operaciones++
+
+   /*
+   FIRESTORE MAX 500 OPERACIONES
+   */
+
+   if(operaciones === 450){
+
+    await batch.commit()
+
+    batch = db.batch()
+    operaciones = 0
+
+   }
+
+  }
+
+  if(operaciones > 0){
+   await batch.commit()
+  }
+
+  console.log("PDF procesado y datos guardados")
+
+  await fs.remove(PDF_PATH)
+
+ }catch(err){
+
+  console.log("Error procesando PDF:",err)
 
  }
-
- await batch.commit()
-
- await fs.remove(PDF_PATH)
 
 }
 
@@ -148,6 +178,8 @@ async function buscarPrecioVehiculo(marca,modelo,anio){
 
  }catch(err){
 
+  console.log("Error MercadoLibre:",err)
+
   return null
 
  }
@@ -160,12 +192,20 @@ CONFIG ADMIN
 
 async function obtenerConfigKM(){
 
- const doc =
-  await db.collection("config").doc("km").get()
+ try{
 
- if(!doc.exists) return {descuento:0}
+  const doc =
+   await db.collection("config").doc("km").get()
 
- return doc.data()
+  if(!doc.exists) return {descuento:0}
+
+  return doc.data()
+
+ }catch(err){
+
+  return {descuento:0}
+
+ }
 
 }
 
@@ -188,6 +228,8 @@ exports.cotizar = async(req,res)=>{
 
   if(!precio){
 
+   console.log("Precio no encontrado en DB, descargando PDF")
+
    await descargarPDF()
 
    await procesarPDF()
@@ -202,6 +244,8 @@ exports.cotizar = async(req,res)=>{
   */
 
   if(!precio){
+
+   console.log("Buscando precio en internet")
 
    precio =
     await buscarPrecioVehiculo(marca,modelo,anio)
@@ -282,7 +326,7 @@ exports.cotizar = async(req,res)=>{
 
  }catch(error){
 
-  console.log(error)
+  console.log("Error cotizacion:",error)
 
   res.status(500).json({
    success:false,
