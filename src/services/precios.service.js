@@ -1,21 +1,21 @@
 const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
-const { PdfReader } = require("pdfreader")
+const csv = require("csv-parser")
 
 const PDF_DIR = path.join(__dirname,"../pdfs")
-const PDF_PATH = path.join(PDF_DIR,"acara_precios.pdf")
+const CSV_PATH = path.join(PDF_DIR,"acara_precios.csv")
 
 const USD_TO_ARS = 1500
 
 const MARCAS_VALIDAS = [
- "ALFA","FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
- "RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
- "KIA","HYUNDAI","MERCEDES","BMW","AUDI"
+"ALFA","FORD","CHEVROLET","VOLKSWAGEN","TOYOTA","HONDA","NISSAN",
+"RENAULT","PEUGEOT","FIAT","CITROEN","JEEP","RAM",
+"KIA","HYUNDAI","MERCEDES","BMW","AUDI"
 ]
 
 /*
-CREAR CARPETA PDF SI NO EXISTE
+CREAR CARPETA
 */
 async function prepararCarpetas(){
  await fs.ensureDir(PDF_DIR)
@@ -29,7 +29,8 @@ function limpiarPrecio(str){
  if(!str) return null
 
  const limpio =
-  str.replace(/\./g,"")
+  str.toString()
+     .replace(/\./g,"")
      .replace(",",".")
      .replace(/[^0-9.]/g,"")
 
@@ -47,6 +48,8 @@ DETECTAR MARCA
 */
 function detectarMarca(texto){
 
+ texto = texto.toUpperCase()
+
  for(const marca of MARCAS_VALIDAS){
 
   if(texto.startsWith(marca))
@@ -59,35 +62,31 @@ function detectarMarca(texto){
 }
 
 /*
-EXTRAER PRECIO
-*/
-function extraerPrecio(linea){
-
- const match =
-  linea.match(/\d{2,3}\.\d{3},\d{2}/)
-
- if(!match) return null
-
- return limpiarPrecio(match[0])
-
-}
-
-/*
-DETECTAR AUTO
+DETECTAR AUTO DESDE TEXTO
 */
 function detectarAuto(linea){
 
- const precioUSD = extraerPrecio(linea)
+ const precioMatch =
+  linea.match(/\d{2,3}\.\d{3},\d{2}/)
 
- if(!precioUSD) return null
+ if(!precioMatch)
+  return null
 
- const marca = detectarMarca(linea)
+ const precioUSD =
+  limpiarPrecio(precioMatch[0])
 
- if(!marca) return null
+ if(!precioUSD)
+  return null
+
+ const marca =
+  detectarMarca(linea)
+
+ if(!marca)
+  return null
 
  const texto =
   linea.replace(marca,"")
-       .replace(/\d{2,3}\.\d{3},\d{2}/,"")
+       .replace(precioMatch[0],"")
        .trim()
 
  const partes =
@@ -115,115 +114,104 @@ function detectarAuto(linea){
 }
 
 /*
-LEER PDF CON PDFREADER
+PROCESAR CSV
 */
-async function leerPDF(){
+async function procesarCSV(){
+
+ if(!await fs.pathExists(CSV_PATH))
+  throw new Error("No se encontró el CSV en /pdfs")
+
+ console.log("Leyendo CSV ACARA...")
 
  return new Promise((resolve,reject)=>{
 
-  const rows = {}
+  let batch = db.batch()
+  let operaciones = 0
+  let total = 0
 
-  new PdfReader().parseFileItems(PDF_PATH,(err,item)=>{
+  fs.createReadStream(CSV_PATH)
+   .pipe(csv())
+   .on("data", async (row)=>{
 
-   if(err) return reject(err)
+    try{
 
-   if(!item){
+     const linea =
+      Object.values(row).join(" ")
 
-    const lineas =
-     Object.values(rows)
-      .map(r => r.join(" "))
-      .filter(Boolean)
+     const auto =
+      detectarAuto(linea)
 
-    resolve(lineas)
-    return
+     if(!auto)
+      return
 
-   }
+     const {
+      marca,
+      modelo,
+      version,
+      precioUSD,
+      precioARS
+     } = auto
 
-   if(item.text){
+     const id =
+      `${marca}_${modelo}_${version}`
+      .toLowerCase()
+      .replace(/\s+/g,"_")
+      .replace(/[^a-z0-9_]/g,"")
 
-    const y =
-     Math.floor(item.y)
+     const ref =
+      db.collection("precios").doc(id)
 
-    if(!rows[y])
-     rows[y] = []
+     batch.set(ref,{
+      marca,
+      modelo,
+      version,
+      precio_usd:precioUSD,
+      precio_ars:precioARS,
+      conversion:USD_TO_ARS,
+      fuente:"ACARA",
+      createdAt:new Date()
+     })
 
-    rows[y].push(item.text)
+     operaciones++
+     total++
 
-   }
+     if(operaciones >= 450){
 
-  })
+      await batch.commit()
+      batch = db.batch()
+      operaciones = 0
+
+     }
+
+    }catch(err){
+     console.error(err)
+    }
+
+   })
+   .on("end", async ()=>{
+
+    if(operaciones > 0)
+     await batch.commit()
+
+    console.log("Autos cargados:",total)
+
+    resolve()
+
+   })
+   .on("error",reject)
 
  })
 
 }
 
 /*
-PROCESAR PDF
+PIPELINE
 */
-async function procesarPDF(){
+async function procesarArchivo(){
 
- if(!await fs.pathExists(PDF_PATH))
-  throw new Error("No se encontró el PDF")
+ await prepararCarpetas()
 
- console.log("Leyendo PDF ACARA...")
-
- const lineas = await leerPDF()
-
- let batch = db.batch()
- let operaciones = 0
- let total = 0
-
- for(const linea of lineas){
-
-  const auto = detectarAuto(linea)
-
-  if(!auto) continue
-
-  const {
-   marca,
-   modelo,
-   version,
-   precioUSD,
-   precioARS
-  } = auto
-
-  const id =
-   `${marca}_${modelo}_${version}`
-   .toLowerCase()
-   .replace(/\s+/g,"_")
-   .replace(/[^a-z0-9_]/g,"")
-
-  const ref =
-   db.collection("precios").doc(id)
-
-  batch.set(ref,{
-   marca,
-   modelo,
-   version,
-   precio_usd:precioUSD,
-   precio_ars:precioARS,
-   conversion:USD_TO_ARS,
-   fuente:"ACARA",
-   createdAt:new Date()
-  })
-
-  operaciones++
-  total++
-
-  if(operaciones >= 450){
-
-   await batch.commit()
-   batch = db.batch()
-   operaciones = 0
-
-  }
-
- }
-
- if(operaciones > 0)
-  await batch.commit()
-
- console.log("Autos cargados:",total)
+ await procesarCSV()
 
 }
 
@@ -234,8 +222,6 @@ async function actualizarSiNecesario(){
 
  try{
 
-  await prepararCarpetas()
-
   const doc =
    await db.collection("config")
     .doc("precios")
@@ -243,9 +229,9 @@ async function actualizarSiNecesario(){
 
   if(!doc.exists){
 
-   console.log("Base vacía, procesando PDF")
+   console.log("Base vacía, procesando CSV")
 
-   await procesarPDF()
+   await procesarArchivo()
 
    await db.collection("config")
     .doc("precios")
@@ -267,7 +253,7 @@ async function actualizarSiNecesario(){
 
    console.log("Actualizando precios")
 
-   await procesarPDF()
+   await procesarArchivo()
 
    await db.collection("config")
     .doc("precios")
