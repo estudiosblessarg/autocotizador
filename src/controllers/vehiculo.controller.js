@@ -60,30 +60,83 @@ exports.getMarcas = async(req,res)=>{
 
  console.log("====================================")
  console.log("🚗 GET MARCAS")
- console.log("Endpoint llamado: /marcas")
 
  try{
 
   const snap = await db.collection("vehiculos").get()
 
-  console.log("Cantidad de documentos encontrados:",snap.size)
+  console.log("Documentos encontrados en Firestore:",snap.size)
 
   const marcas = snap.docs.map(d=>d.id)
 
-  console.log("Marcas enviadas al frontend:",marcas)
+  console.log("Marcas Firestore:",marcas)
 
-  res.json(marcas)
+  if(marcas.length > 0){
+
+   console.log("Enviando marcas desde Firestore")
+
+   return res.json(marcas)
+
+  }
+
+  /*
+  ====================================
+  SI FIRESTORE ESTA VACIO
+  BUSCAR EN INTERNET
+  ====================================
+  */
+
+  console.log("⚠️ Firestore vacío")
+  console.log("🌐 Buscando marcas en internet...")
+
+  const url = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json"
+
+  console.log("URL API:",url)
+
+  const response = await fetch(url)
+
+  console.log("Status API:",response.status)
+
+  const data = await response.json()
+
+  console.log("Total marcas recibidas:",data.Results.length)
+
+  const marcasInternet = data.Results.map(m=>m.Make_Name)
+
+  console.log("Primeras 20 marcas:",marcasInternet.slice(0,20))
+
+  /*
+  ====================================
+  GUARDAR EN FIRESTORE
+  ====================================
+  */
+
+  for(const marca of marcasInternet.slice(0,200)){
+
+   console.log("Guardando marca:",marca)
+
+   await db
+    .collection("vehiculos")
+    .doc(marca)
+    .set({created:true})
+
+  }
+
+  console.log("Marcas enviadas al frontend:",marcasInternet.length)
+
+  res.json(marcasInternet)
 
  }catch(err){
 
   console.error("❌ Error obteniendo marcas:",err)
 
-  res.status(500).json({error:"error obteniendo marcas"})
+  res.status(500).json({
+   error:"error obteniendo marcas"
+  })
 
  }
 
 }
-
 
 /*
 ========================================
