@@ -10,18 +10,13 @@ function logout(){
  window.location.href = "login.html"
 }
 
-
-
-
-
-
 // ================= NORMALIZAR =================
 function normalizar(str){
  return str.toLowerCase().trim()
 }
 
 // ================= API =================
-const API = "/api/auth/cotizador"
+const API = "/api/auth/cotizador" // ✅ ESTA BIEN
 
 // ================= CACHE CONFIG =================
 let CONFIG = null
@@ -31,14 +26,26 @@ async function cargarConfig(){
 
  try{
 
-  const res = await fetch(`${API}/marcas`)
+  const res = await fetch(`${API}/marcas`) // ✅ RUTA CORRECTA
+
+  const contentType = res.headers.get("content-type")
+
+  // 🔥 evita el error del HTML
+  if(!contentType || !contentType.includes("application/json")){
+   throw new Error("El backend devolvió HTML → ruta incorrecta")
+  }
+
   const data = await res.json()
+
+  if(!res.ok){
+   console.error("❌ Backend error:", data)
+   return
+  }
 
   // 🔥 Si backend devuelve objeto en vez de array
   if(typeof data === "object" && !Array.isArray(data)){
    CONFIG = data
   }else{
-   // si sigue devolviendo array lo convertimos
    CONFIG = {}
    data.forEach(m => CONFIG[m] = {})
   }
@@ -128,18 +135,39 @@ function cargarVersiones(){
 CARGAR AÑOS
 ========================================================
 */
-function cargarAnios(){
+async function cargarAnios(){
+
+ const marca = normalizar(
+  document.getElementById("marca").value
+ )
+
+ const modelo = normalizar(
+  document.getElementById("modelo").value
+ )
+
+ const version = normalizar(
+  document.getElementById("version").value
+ )
+
+ if(!marca || !modelo || !version) return
 
  limpiarSelect("anio")
 
- const select = document.getElementById("anio")
+ try{
 
- // 🔥 hardcode por ahora
- const anios = [2024,2023,2022,2021,2020]
+  const res = await fetch(`${API}/anios/${marca}/${modelo}/${version}`) // ✅ RUTA CORRECTA
 
- anios.forEach(a=>{
-  select.innerHTML += `<option value="${a}">${a}</option>`
- })
+  const data = await res.json()
+
+  const select = document.getElementById("anio")
+
+  data.forEach(a=>{
+   select.innerHTML += `<option value="${a}">${a}</option>`
+  })
+
+ }catch(err){
+  console.error("❌ Error cargando años", err)
+ }
 }
 
 /*
@@ -157,7 +185,7 @@ async function cotizar(){
 
  try{
 
-  const res = await fetch(`${API}/cotizar`,{
+  const res = await fetch(`${API}/cotizar`,{ // ✅ RUTA CORRECTA
 
    method:"POST",
 
@@ -175,6 +203,12 @@ async function cotizar(){
    })
 
   })
+
+  const contentType = res.headers.get("content-type")
+
+  if(!contentType || !contentType.includes("application/json")){
+   throw new Error("Respuesta inválida del servidor")
+  }
 
   const data = await res.json()
 
@@ -195,7 +229,7 @@ async function cotizar(){
   `
 
  }catch(err){
-  console.error(err)
+  console.error("❌ Error cotizar:", err)
  }
 }
 
