@@ -11,10 +11,11 @@ function normalizar(str) {
 async function getConfig() {
 
  const snap = await db
-  .collection("config")
-  .doc("autos")
-  .collection("data")
-  .get()
+ .collection("config")
+ .doc("autos")
+ .collection("data")
+ .doc("OTRA") // 🔥 CLAVE
+ .get()
 
  console.log("🔥 DOCS EN FIREBASE:", snap.size)
 
