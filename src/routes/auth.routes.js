@@ -28,15 +28,6 @@ router.post("/cotizador/cotizar",cotizadorController.cotizar)
 
 
 // ======================
-// COTIZACIONES ADMIN
-// ======================
-
-router.get("/cotizaciones",cotizacionController.getAll)
-router.put("/cotizaciones/:id",cotizacionController.update)
-router.delete("/cotizaciones/:id",cotizacionController.delete)
-
-
-// ======================
 // CONFIG
 // ======================
 
