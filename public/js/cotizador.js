@@ -43,9 +43,17 @@ async function cargarConfig(){
   }
 
   // 🔥 Si backend devuelve objeto en vez de array
-  if(typeof data === "object" && !Array.isArray(data)){
-   CONFIG = data
-  }else{
+  if (Array.isArray(data)) {
+ CONFIG = {}
+ data.forEach(m => CONFIG[m] = {})
+}
+else if (data.data && Array.isArray(data.data)) {
+ CONFIG = {}
+ data.data.forEach(m => CONFIG[m] = {})
+}
+else {
+ console.error("❌ Formato inválido:", data)
+}else{
    CONFIG = {}
    data.forEach(m => CONFIG[m] = {})
   }
