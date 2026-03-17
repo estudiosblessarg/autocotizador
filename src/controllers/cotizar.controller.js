@@ -16,11 +16,17 @@ async function getConfig() {
   .collection("OTRA")
   .get()
 
- if (snap.empty) return {}
+ console.log("🔥 DOCS EN FIREBASE:", snap.size)
+
+ if (snap.empty) {
+  console.log("❌ FIREBASE VACÍO EN config/autos/OTRA")
+  return null
+ }
 
  const config = {}
 
  snap.forEach(doc => {
+  console.log("📄 DOC:", doc.id, doc.data())
   config[doc.id] = doc.data()
  })
 
@@ -33,8 +39,10 @@ exports.getMarcas = async (req, res) => {
   const config = await getConfig()
 
   if (!config) {
-   return res.status(400).json({ error: "No config/autos" })
-  }
+ return res.status(500).json({
+  error: "Firebase vacío o mal path"
+ })
+}
 
   const marcas = Object.keys(config)
 
