@@ -1,0 +1,1122 @@
+[
+  {
+    "modelo": "ALFA ROMEO 159",
+    "version": "COUPE",
+    "precio": 32831
+  },
+  {
+    "modelo": "SPIDER",
+    "version": "CABRIO",
+    "precio": 43845
+  },
+  {
+    "modelo": "AUDI A1",
+    "version": "CABRIO",
+    "precio": 29811
+  },
+  {
+    "modelo": "AUDI A1",
+    "version": "AVANT",
+    "precio": 13453
+  },
+  {
+    "modelo": "AUDI A1",
+    "version": "SPORTBACK",
+    "precio": 28625
+  },
+  {
+    "modelo": "AUDI A1",
+    "version": "COUPE",
+    "precio": 31025
+  },
+  {
+    "modelo": "R8 AUDI 0KM EN US",
+    "version": "COUPE",
+    "precio": 220479
+  },
+  {
+    "modelo": "R8 AUDI 0KM EN US",
+    "version": "SPYDER",
+    "precio": 293719
+  },
+  {
+    "modelo": "RS5",
+    "version": "COUPE",
+    "precio": 167857
+  },
+  {
+    "modelo": "RS5",
+    "version": "SPORTBACK",
+    "precio": 127649
+  },
+  {
+    "modelo": "RS ETRON",
+    "version": "RS Q",
+    "precio": 180427
+  },
+  {
+    "modelo": "RS Q8",
+    "version": "SPORTBACK",
+    "precio": 100787
+  },
+  {
+    "modelo": "RS Q8",
+    "version": "COUPE",
+    "precio": 39556
+  },
+  {
+    "modelo": "RS Q8",
+    "version": "ROADSTER",
+    "precio": 38518
+  },
+  {
+    "modelo": "120",
+    "version": "COUPE",
+    "precio": 21023
+  },
+  {
+    "modelo": "120",
+    "version": "CONV",
+    "precio": 40569
+  },
+  {
+    "modelo": "130",
+    "version": "COUPE",
+    "precio": 43229
+  },
+  {
+    "modelo": "130",
+    "version": "CONV",
+    "precio": 49645
+  },
+  {
+    "modelo": "325",
+    "version": "COUPE",
+    "precio": 31273
+  },
+  {
+    "modelo": "325",
+    "version": "CONV",
+    "precio": 40390
+  },
+  {
+    "modelo": "335",
+    "version": "COUPE",
+    "precio": 41894
+  },
+  {
+    "modelo": "335",
+    "version": "GRAN COUPE",
+    "precio": 63116
+  },
+  {
+    "modelo": "335",
+    "version": "CABRIO",
+    "precio": 124107
+  },
+  {
+    "modelo": "550",
+    "version": "COUPE",
+    "precio": 67466
+  },
+  {
+    "modelo": "550",
+    "version": "CONV SPORTIVE",
+    "precio": 61145
+  },
+  {
+    "modelo": "550",
+    "version": "COUPE GRAN",
+    "precio": 105887
+  },
+  {
+    "modelo": "750",
+    "version": "COUPE",
+    "precio": 59061
+  },
+  {
+    "modelo": "750",
+    "version": "COUPE COMPETITION MRACE TRACK",
+    "precio": 209660
+  },
+  {
+    "modelo": "750",
+    "version": "COUPE GRAN",
+    "precio": 127990
+  },
+  {
+    "modelo": "750",
+    "version": "CONV",
+    "precio": 76515
+  },
+  {
+    "modelo": "750",
+    "version": "ROADSTER",
+    "precio": 52688
+  },
+  {
+    "modelo": "BYD",
+    "version": "DOLPHIN MINI",
+    "precio": 24140
+  },
+  {
+    "modelo": "FACE",
+    "version": "FULWIN",
+    "precio": 8096
+  },
+  {
+    "modelo": "AGILE",
+    "version": "AVEO",
+    "precio": 9495
+  },
+  {
+    "modelo": "CAMARO SS",
+    "version": "CONV",
+    "precio": 132200
+  },
+  {
+    "modelo": "CAPTIVA",
+    "version": "COBALT",
+    "precio": 8662
+  },
+  {
+    "modelo": "MONTANA PICK  UP",
+    "version": "ONIX",
+    "precio": 11392
+  },
+  {
+    "modelo": "MONTANA PICK  UP",
+    "version": "PRISMA",
+    "precio": 8763
+  },
+  {
+    "modelo": "SILVERADO",
+    "version": "DC V",
+    "precio": 116256.9
+  },
+  {
+    "modelo": "SILVERADO",
+    "version": "SONIC",
+    "precio": 10346
+  },
+  {
+    "modelo": "SILVERADO",
+    "version": "SPARK",
+    "precio": 11363
+  },
+  {
+    "modelo": "SPIN",
+    "version": "TRACKER",
+    "precio": 15056
+  },
+  {
+    "modelo": "TOWN  COUNTRY",
+    "version": "VAN",
+    "precio": 30822
+  },
+  {
+    "modelo": "BERLINGO",
+    "version": "FURGON",
+    "precio": 9211
+  },
+  {
+    "modelo": "BERLINGO",
+    "version": "MULTISPACE",
+    "precio": 12912
+  },
+  {
+    "modelo": "C 4 CACTUS",
+    "version": "VAN",
+    "precio": 13126
+  },
+  {
+    "modelo": "C 4 CACTUS",
+    "version": "VAV",
+    "precio": 19195
+  },
+  {
+    "modelo": "C 4 GRAND SPACETOURER",
+    "version": "VAN",
+    "precio": 34281
+  },
+  {
+    "modelo": "JUMPER",
+    "version": "FURGON",
+    "precio": 19671
+  },
+  {
+    "modelo": "JUMPER",
+    "version": "CHASIS",
+    "precio": 32544
+  },
+  {
+    "modelo": "JUMPER",
+    "version": "MINIBUS",
+    "precio": 69840
+  },
+  {
+    "modelo": "JUMPY",
+    "version": "FURGON",
+    "precio": 22902
+  },
+  {
+    "modelo": "JUMPY",
+    "version": "FURGON HDi",
+    "precio": 57440
+  },
+  {
+    "modelo": "JUMPY",
+    "version": "VAN",
+    "precio": 23748
+  },
+  {
+    "modelo": "DFSK",
+    "version": "GLORY",
+    "precio": 34500
+  },
+  {
+    "modelo": "SERIE C",
+    "version": "PICK UP",
+    "precio": 12581
+  },
+  {
+    "modelo": "DODGE",
+    "version": "JOURNEY",
+    "precio": 14940
+  },
+  {
+    "modelo": "DONGFENG",
+    "version": "VAN",
+    "precio": 27493
+  },
+  {
+    "modelo": "UVAN 414",
+    "version": "UVAN",
+    "precio": 43994
+  },
+  {
+    "modelo": "DS 3",
+    "version": "CABRIO",
+    "precio": 25065
+  },
+  {
+    "modelo": "500",
+    "version": "CABRIO",
+    "precio": 22599
+  },
+  {
+    "modelo": "CRONOS",
+    "version": "DOBL CARGO",
+    "precio": 9028
+  },
+  {
+    "modelo": "DUCATO",
+    "version": "COMBINATO",
+    "precio": 19826
+  },
+  {
+    "modelo": "DUCATO",
+    "version": "FURGON",
+    "precio": 21255
+  },
+  {
+    "modelo": "DUCATO",
+    "version": "CHASIS",
+    "precio": 33815
+  },
+  {
+    "modelo": "FIORINO",
+    "version": "FURGON",
+    "precio": 8356
+  },
+  {
+    "modelo": "IDEA",
+    "version": "LINEA",
+    "precio": 9407
+  },
+  {
+    "modelo": "MOBI",
+    "version": "PALIO",
+    "precio": 21407
+  },
+  {
+    "modelo": "MOBI",
+    "version": "WEEKEND",
+    "precio": 10403
+  },
+  {
+    "modelo": "PULSE",
+    "version": "STRADA PICK  UP CEXTEN.",
+    "precio": 9724
+  },
+  {
+    "modelo": "PULSE",
+    "version": "CEXTEN.",
+    "precio": 10193
+  },
+  {
+    "modelo": "PULSE",
+    "version": "CPLUS",
+    "precio": 20346
+  },
+  {
+    "modelo": "PULSE",
+    "version": "DC T",
+    "precio": 45650
+  },
+  {
+    "modelo": "TORO PICK UP",
+    "version": "DC T",
+    "precio": 47490
+  },
+  {
+    "modelo": "TORO PICK UP",
+    "version": "DC TD",
+    "precio": 57190
+  },
+  {
+    "modelo": "FIESTA",
+    "version": "FOCUS",
+    "precio": 10391
+  },
+  {
+    "modelo": "MUSTANG",
+    "version": "COUPE",
+    "precio": 90803
+  },
+  {
+    "modelo": "SMAX",
+    "version": "VAN",
+    "precio": 10104
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "TRANSIT CHASIS",
+    "precio": 18928
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "CHASIS",
+    "precio": 19647
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "FURGON",
+    "precio": 16883
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "MINIBUS",
+    "precio": 21360
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "VAN",
+    "precio": 39948
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "ETRANSIT CHASIS CABINA",
+    "precio": 77206
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "VAN MEDIANA",
+    "precio": 74548
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "VAN MEDIANA TE",
+    "precio": 77137
+  },
+  {
+    "modelo": "TERRITORY",
+    "version": "VAN LARGA TE",
+    "precio": 80861
+  },
+  {
+    "modelo": "VIEW CS2",
+    "version": "MINIBUS",
+    "precio": 31961
+  },
+  {
+    "modelo": "EMGRAND 7",
+    "version": "EMGRAND X",
+    "precio": 19441
+  },
+  {
+    "modelo": "CRETA",
+    "version": "ELANTRA",
+    "precio": 16157
+  },
+  {
+    "modelo": "H 1",
+    "version": "VAN",
+    "precio": 24693
+  },
+  {
+    "modelo": "H 1",
+    "version": "TRUCK",
+    "precio": 33484
+  },
+  {
+    "modelo": "H 350",
+    "version": "FURGON",
+    "precio": 48699
+  },
+  {
+    "modelo": "H 350",
+    "version": "IONIQ",
+    "precio": 38913
+  },
+  {
+    "modelo": "JEEP CHEROKEE",
+    "version": "CHEROKEE GRAND",
+    "precio": 34516
+  },
+  {
+    "modelo": "JEEP CHEROKEE",
+    "version": "COMMANDER",
+    "precio": 46654
+  },
+  {
+    "modelo": "JEEP CHEROKEE",
+    "version": "COMPASS",
+    "precio": 19058
+  },
+  {
+    "modelo": "GLADIATOR PICKUP",
+    "version": "PATRIOT",
+    "precio": 16328
+  },
+  {
+    "modelo": "CARNIVAL",
+    "version": "VAN",
+    "precio": 33888
+  },
+  {
+    "modelo": "CERATO",
+    "version": "KOUP",
+    "precio": 14868
+  },
+  {
+    "modelo": "SELTOS",
+    "version": "SOUL",
+    "precio": 13344
+  },
+  {
+    "modelo": "KYC MAMUT",
+    "version": "BOX",
+    "precio": 27965
+  },
+  {
+    "modelo": "EVOQUE",
+    "version": "COUPE",
+    "precio": 88321
+  },
+  {
+    "modelo": "EVOQUE",
+    "version": "CONV",
+    "precio": 105246
+  },
+  {
+    "modelo": "FREELANDER",
+    "version": "RANGE ROVER",
+    "precio": 77586
+  },
+  {
+    "modelo": "FREELANDER",
+    "version": "RANGE ROVER EVOQUE",
+    "precio": 110665
+  },
+  {
+    "modelo": "LEXUS ES",
+    "version": "COUPE",
+    "precio": 135289
+  },
+  {
+    "modelo": "FOISON",
+    "version": "CS TRUCK",
+    "precio": 15243
+  },
+  {
+    "modelo": "FOISON",
+    "version": "FURGON CARGO",
+    "precio": 15463
+  },
+  {
+    "modelo": "FOISON",
+    "version": "BOX",
+    "precio": 17169
+  },
+  {
+    "modelo": "MAXUS",
+    "version": "CHASISCABINA L",
+    "precio": 78649
+  },
+  {
+    "modelo": "MAXUS",
+    "version": "FURGON L",
+    "precio": 83503
+  },
+  {
+    "modelo": "A 45",
+    "version": "ACOUPE",
+    "precio": 91046
+  },
+  {
+    "modelo": "B 200",
+    "version": "COUPE AMG",
+    "precio": 145273
+  },
+  {
+    "modelo": "B 200",
+    "version": "COUPE",
+    "precio": 95891
+  },
+  {
+    "modelo": "C 220",
+    "version": "COUPE BLUEEFFICIENCY CITY AT",
+    "precio": 30517
+  },
+  {
+    "modelo": "C 220",
+    "version": "COUPE BLUEEFFICIENCY AT",
+    "precio": 23916
+  },
+  {
+    "modelo": "C 220",
+    "version": "COUPE BLUEEFFICIENCY SPORT AT C",
+    "precio": 33776
+  },
+  {
+    "modelo": "C 220",
+    "version": "COUPE AMGLINE AT",
+    "precio": 107033
+  },
+  {
+    "modelo": "C 220",
+    "version": "COUPE CITY AT",
+    "precio": 81851
+  },
+  {
+    "modelo": "C 220",
+    "version": "CABRIO",
+    "precio": 116415
+  },
+  {
+    "modelo": "C 350",
+    "version": "COUPE",
+    "precio": 110706
+  },
+  {
+    "modelo": "CLA 45",
+    "version": "COUPE",
+    "precio": 73032
+  },
+  {
+    "modelo": "CLA 45",
+    "version": "CLA",
+    "precio": 30963
+  },
+  {
+    "modelo": "CLE 53",
+    "version": "COUPE",
+    "precio": 237210
+  },
+  {
+    "modelo": "CLE 300",
+    "version": "COUPE",
+    "precio": 144260
+  },
+  {
+    "modelo": "CLS 350",
+    "version": "COUPE",
+    "precio": 218544
+  },
+  {
+    "modelo": "E 250",
+    "version": "COUPE",
+    "precio": 32500
+  },
+  {
+    "modelo": "E 400",
+    "version": "COUPE",
+    "precio": 120282
+  },
+  {
+    "modelo": "E 500",
+    "version": "EQE",
+    "precio": 226487
+  },
+  {
+    "modelo": "GLA 45",
+    "version": "GLA",
+    "precio": 42691
+  },
+  {
+    "modelo": "GLB 250",
+    "version": "COUPE",
+    "precio": 189995
+  },
+  {
+    "modelo": "GLB 250",
+    "version": "GLC",
+    "precio": 293481
+  },
+  {
+    "modelo": "GLB 250",
+    "version": "COUPE S",
+    "precio": 298866
+  },
+  {
+    "modelo": "GLB 250",
+    "version": "COUPE S E PERFORMANCE",
+    "precio": 358050
+  },
+  {
+    "modelo": "GLE 53",
+    "version": "COUPE",
+    "precio": 277200
+  },
+  {
+    "modelo": "GLE 63 S",
+    "version": "COUPE",
+    "precio": 227676
+  },
+  {
+    "modelo": "GLE 450",
+    "version": "GLE",
+    "precio": 269742
+  },
+  {
+    "modelo": "GT 63",
+    "version": "S E PERFORMANCE AMG MERCEDESAMG GT c",
+    "precio": 479325
+  },
+  {
+    "modelo": "GT 63",
+    "version": "GTROADSTER",
+    "precio": 561675
+  },
+  {
+    "modelo": "MERCEDESAMG GT 4",
+    "version": "COUPE",
+    "precio": 561675
+  },
+  {
+    "modelo": "MERCEDESAMG GT R",
+    "version": "GTCOUPE",
+    "precio": 610554
+  },
+  {
+    "modelo": "SL 63",
+    "version": "SLROADSTER",
+    "precio": 317360
+  },
+  {
+    "modelo": "SL 63",
+    "version": "SL S PERFORMANCE AMG CROMO SLC",
+    "precio": 496650
+  },
+  {
+    "modelo": "SL 63",
+    "version": "ROADSTER",
+    "precio": 124650
+  },
+  {
+    "modelo": "SLK",
+    "version": "CROADSTER",
+    "precio": 65286
+  },
+  {
+    "modelo": "SLS",
+    "version": "COUPE",
+    "precio": 170707
+  },
+  {
+    "modelo": "SLS",
+    "version": "SPRINTER",
+    "precio": 21247
+  },
+  {
+    "modelo": "SLS",
+    "version": "VAN",
+    "precio": 32858
+  },
+  {
+    "modelo": "SLS",
+    "version": "VITO",
+    "precio": 23080
+  },
+  {
+    "modelo": "SLS",
+    "version": "FURGON",
+    "precio": 30727
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "FURGON CDI V",
+    "precio": 57852
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "FURGON CDI PLUS",
+    "precio": 64086
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "FURGON CDI MIXTO AT PRO VITO",
+    "precio": 78146
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "COMBI",
+    "precio": 42861
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "TOURER",
+    "precio": 46349
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "TOURER CDI AT",
+    "precio": 97020
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "VITO",
+    "precio": 76090
+  },
+  {
+    "modelo": "VITO 114 M BENZ 0KM EN US",
+    "version": "CYBERSTER ROADSTER ELECTRICO AWD",
+    "precio": 130130
+  },
+  {
+    "modelo": "CLUBMAN",
+    "version": "COUPE",
+    "precio": 24937
+  },
+  {
+    "modelo": "CLUBMAN",
+    "version": "COUPE S",
+    "precio": 38017
+  },
+  {
+    "modelo": "CLUBMAN",
+    "version": "ROADSTER S",
+    "precio": 40390
+  },
+  {
+    "modelo": "CLUBMAN",
+    "version": "CONV",
+    "precio": 24125
+  },
+  {
+    "modelo": "CLUBMAN",
+    "version": "CONV S CHILI",
+    "precio": 49820
+  },
+  {
+    "modelo": "CLUBMAN",
+    "version": "CONV CLASSIC CONF PLUS",
+    "precio": 78024
+  },
+  {
+    "modelo": "MITSUBISHI",
+    "version": "LANCER",
+    "precio": 13676
+  },
+  {
+    "modelo": "MITSUBISHI",
+    "version": "OUTLANDER",
+    "precio": 21333
+  },
+  {
+    "modelo": "COUPE",
+    "version": "COUPE",
+    "precio": 70316
+  },
+  {
+    "modelo": "PEUGEOT 206",
+    "version": "CABRIO",
+    "precio": 29853
+  },
+  {
+    "modelo": "307",
+    "version": "COUPE",
+    "precio": 38553
+  },
+  {
+    "modelo": "BOXER",
+    "version": "CHASIS",
+    "precio": 33540
+  },
+  {
+    "modelo": "BOXER",
+    "version": "FURGON",
+    "precio": 26948
+  },
+  {
+    "modelo": "BOXER",
+    "version": "FURGON HDi",
+    "precio": 51195
+  },
+  {
+    "modelo": "BOXER",
+    "version": "FURGON HDI",
+    "precio": 57500
+  },
+  {
+    "modelo": "BOXER",
+    "version": "VAN",
+    "precio": 35252
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "FURGON",
+    "precio": 8975
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "PATAGONICA",
+    "precio": 17157
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "RCZ COUPE",
+    "precio": 29720
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "COUPE TIPT",
+    "precio": 31835
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "COUPE CARBON CONCEPT",
+    "precio": 32057
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "COUPE",
+    "precio": 37216
+  },
+  {
+    "modelo": "PARTNER",
+    "version": "VAN",
+    "precio": 32407
+  },
+  {
+    "modelo": "CLIO WORK",
+    "version": "FLUENCE",
+    "precio": 11002
+  },
+  {
+    "modelo": "CLIO WORK",
+    "version": "KANGOO BREAK",
+    "precio": 11433
+  },
+  {
+    "modelo": "CLIO WORK",
+    "version": "BREAK",
+    "precio": 14108
+  },
+  {
+    "modelo": "CLIO WORK",
+    "version": "FURGON",
+    "precio": 8870
+  },
+  {
+    "modelo": "KANGOO II EXPRESS",
+    "version": "FURGON",
+    "precio": 17977
+  },
+  {
+    "modelo": "KANGOO II EXPRESS",
+    "version": "FURGON ZE",
+    "precio": 31989
+  },
+  {
+    "modelo": "KANGOO II EXPRESS",
+    "version": "FURGON ZE MAXI",
+    "precio": 34051
+  },
+  {
+    "modelo": "KANGOO II EXPRESS",
+    "version": "FURGON ETECH",
+    "precio": 49980
+  },
+  {
+    "modelo": "MASTER",
+    "version": "CHASIS",
+    "precio": 24022
+  },
+  {
+    "modelo": "MASTER",
+    "version": "FURGON",
+    "precio": 17402
+  },
+  {
+    "modelo": "MASTER",
+    "version": "MINIBUS",
+    "precio": 25176
+  },
+  {
+    "modelo": "MEGANE III",
+    "version": "COUPE RS",
+    "precio": 23212
+  },
+  {
+    "modelo": "MEGANE III",
+    "version": "COUPE",
+    "precio": 29752
+  },
+  {
+    "modelo": "SANDERO STEPWAY",
+    "version": "SYMBOL",
+    "precio": 7621
+  },
+  {
+    "modelo": "T 30",
+    "version": "VAN",
+    "precio": 21335
+  },
+  {
+    "modelo": "FORTWO",
+    "version": "COUPE",
+    "precio": 22569
+  },
+  {
+    "modelo": "FORTWO",
+    "version": "CONV",
+    "precio": 19445
+  },
+  {
+    "modelo": "SSANGYONG",
+    "version": "ACTYON",
+    "precio": 12604
+  },
+  {
+    "modelo": "KORANDO",
+    "version": "STAVIC VAN",
+    "precio": 12797
+  },
+  {
+    "modelo": "TRIBECA",
+    "version": "WRX",
+    "precio": 44720
+  },
+  {
+    "modelo": "GRAND VITARA SUZUKI 0KM EN US",
+    "version": "JIMMY",
+    "precio": 36472
+  },
+  {
+    "modelo": "GRAND VITARA SUZUKI 0KM EN US",
+    "version": "VITARA",
+    "precio": 24124
+  },
+  {
+    "modelo": "TOYOTA",
+    "version": "COUPE",
+    "precio": 34429
+  },
+  {
+    "modelo": "HIACE",
+    "version": "FURGON",
+    "precio": 40124
+  },
+  {
+    "modelo": "HIACE",
+    "version": "COMMUTER",
+    "precio": 55639
+  },
+  {
+    "modelo": "HIACE",
+    "version": "WAGON",
+    "precio": 70294
+  },
+  {
+    "modelo": "HILUX PICK  UP",
+    "version": "DC V",
+    "precio": 52923
+  },
+  {
+    "modelo": "LAND CRUISER",
+    "version": "PRIUS",
+    "precio": 14054
+  },
+  {
+    "modelo": "YARIS",
+    "version": "YARIS CROSS",
+    "precio": 41464
+  },
+  {
+    "modelo": "AMAROK PICK  UP",
+    "version": "BORA",
+    "precio": 14299
+  },
+  {
+    "modelo": "FOX",
+    "version": "GOL",
+    "precio": 8687
+  },
+  {
+    "modelo": "FOX",
+    "version": "GOL COUNTRY",
+    "precio": 8416
+  },
+  {
+    "modelo": "GOLF",
+    "version": "NEW BEETLE",
+    "precio": 13020
+  },
+  {
+    "modelo": "NIVUS",
+    "version": "PASSAT",
+    "precio": 11170
+  },
+  {
+    "modelo": "SAVEIRO PICK  UP",
+    "version": "CEXT.",
+    "precio": 10343
+  },
+  {
+    "modelo": "SAVEIRO PICK  UP CROSS",
+    "version": "SCIROCCO",
+    "precio": 24834
+  },
+  {
+    "modelo": "SAVEIRO PICK  UP CROSS",
+    "version": "VAN",
+    "precio": 21895
+  },
+  {
+    "modelo": "THE BEETLE",
+    "version": "CONV",
+    "precio": 43147
+  },
+  {
+    "modelo": "VENTO",
+    "version": "VIRTUS",
+    "precio": 16173
+  },
+  {
+    "modelo": "V 60",
+    "version": "RURAL T",
+    "precio": 22274
+  },
+  {
+    "modelo": "ZANELLA FORCE TRUCK",
+    "version": "CHASIS",
+    "precio": 16922
+  },
+  {
+    "modelo": "ZANELLA FORCE TRUCK",
+    "version": "Z TRUCK CS",
+    "precio": 23643
+  }
+]
