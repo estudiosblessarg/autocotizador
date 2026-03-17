@@ -44,6 +44,9 @@ async function cargarDesdeJSON() {
  let operaciones = 0
  let total = 0
 
+ // 🔥 NUEVO: estructura para config
+ const configAutos = {}
+
  for (const auto of data) {
 
   try {
@@ -88,6 +91,20 @@ async function cargarDesdeJSON() {
     updatedAt: new Date()
    })
 
+   // ================= CONFIG (NUEVO) =================
+
+   if (!configAutos[marca]) {
+    configAutos[marca] = {}
+   }
+
+   if (!configAutos[marca][modelo]) {
+    configAutos[marca][modelo] = []
+   }
+
+   if (!configAutos[marca][modelo].includes(version)) {
+    configAutos[marca][modelo].push(version)
+   }
+
    operaciones++
    total++
 
@@ -110,13 +127,22 @@ async function cargarDesdeJSON() {
   }
  }
 
+ // Guardar lo que queda
  if (operaciones > 0)
   await batch.commit()
+
+ // ================= GUARDAR CONFIG =================
+
+ await db.collection("config").doc("autos").set({
+  data: configAutos,
+  updatedAt: new Date()
+ })
 
  console.log("\n========================")
  console.log("✅ CARGA COMPLETA")
  console.log("========================")
  console.log("🚗 Total autos:", total)
+ console.log("🧠 Config guardada en config/autos")
  console.log("========================\n")
 
 }
