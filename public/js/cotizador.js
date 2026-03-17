@@ -322,13 +322,13 @@ async function cotizar(){
     "Authorization":"Bearer "+localStorage.getItem("token")
    },
 
-   body:JSON.stringify({
-    marca,
-    modelo,
-    version,
-    anio,
-    km
-   })
+   body: JSON.stringify({
+   marca: marca.toLowerCase(),
+   modelo: modelo.toLowerCase(),
+   version: version.toLowerCase(),
+   anio,
+   km
+})
 
   })
 
