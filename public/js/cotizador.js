@@ -1,369 +1,241 @@
+// ================= NORMALIZAR =================
+function normalizar(str){
+ return str.toLowerCase().trim()
+}
+
 /*
 ========================================================
 CERRAR SESIÓN
 ========================================================
 */
-
 function logout(){
- console.log("[LOGOUT] Eliminando token y usuario de localStorage")
-
  localStorage.removeItem("token")
  localStorage.removeItem("user")
-
- console.log("[LOGOUT] Redirigiendo a login.html")
-
  window.location.href = "login.html"
 }
-
 
 /*
 ========================================================
 CONFIG API
 ========================================================
 */
-
 const API = "/api/auth/cotizador"
 
-console.log("[CONFIG] API base:", API)
+/*
+========================================================
+HELPER FETCH
+========================================================
+*/
+async function fetchSafe(url){
 
+ try{
+
+  const res = await fetch(url)
+
+  const data = await res.json()
+
+  if(!res.ok){
+   console.error("❌ Backend error:", data)
+   return null
+  }
+
+  return data
+
+ }catch(err){
+  console.error("❌ Fetch error:", err)
+  return null
+ }
+}
 
 /*
 ========================================================
 CARGAR MARCAS
 ========================================================
 */
-
 async function cargarMarcas(){
 
- console.log("[MARCAS] Iniciando carga de marcas")
+ const marcas = await fetchSafe(`${API}/marcas`)
 
- try{
-
-  const url = `${API}/marcas`
-  console.log("[MARCAS] Fetch URL:", url)
-
-  const res = await fetch(url)
-
-  console.log("[MARCAS] Response status:", res.status)
-
-  if(!res.ok){
-   console.error("[MARCAS] Error HTTP:", res.status)
-   return
-  }
-
-  const marcas = await res.json()
-
-  console.log("[MARCAS] Datos recibidos:", marcas)
-
-  const select = document.getElementById("marca")
-
-  if(!select){
-   console.error("[MARCAS] No existe el select #marca en el HTML")
-   return
-  }
-
-  select.innerHTML = `<option value="">Seleccione una marca</option>`
-
-  if(!Array.isArray(marcas)){
-   console.error("[MARCAS] El backend no devolvió un array:", marcas)
-   return
-  }
-
-  marcas.forEach(m=>{
-   console.log("[MARCAS] Agregando opción:", m)
-   select.innerHTML += `<option value="${m}">${m}</option>`
-  })
-
-  console.log("[MARCAS] Total marcas cargadas:", marcas.length)
-
- }catch(err){
-
-  console.error("[MARCAS] Error cargando marcas:", err)
-
+ if(!Array.isArray(marcas)){
+  console.error("❌ marcas no es array", marcas)
+  return
  }
 
-}
+ const select = document.getElementById("marca")
 
+ select.innerHTML = `<option value="">Seleccione una marca</option>`
+
+ marcas.forEach(m=>{
+  select.innerHTML += `<option value="${m}">${m.toUpperCase()}</option>`
+ })
+}
 
 /*
 ========================================================
 CARGAR MODELOS
 ========================================================
 */
-
 async function cargarModelos(){
 
- const marca = document.getElementById("marca").value
+ const marca = normalizar(
+  document.getElementById("marca").value
+ )
 
- console.log("[MODELOS] Marca seleccionada:", marca)
+ if(!marca) return
 
- if(!marca){
-  console.warn("[MODELOS] No hay marca seleccionada")
-  return
- }
+ limpiarSelect("modelo")
+ limpiarSelect("version")
+ limpiarSelect("anio")
 
- try{
+ const modelos =
+  await fetchSafe(`${API}/modelos/${marca}`)
 
-  const url = `${API}/modelos/${marca}`
+ if(!Array.isArray(modelos)) return
 
-  console.log("[MODELOS] Fetch URL:", url)
+ const select = document.getElementById("modelo")
 
-  const res = await fetch(url)
-
-  console.log("[MODELOS] Response status:", res.status)
-
-  if(!res.ok){
-   console.error("[MODELOS] Error HTTP:", res.status)
-   return
-  }
-
-  const modelos = await res.json()
-
-  console.log("[MODELOS] Datos recibidos:", modelos)
-
-  const select = document.getElementById("modelo")
-
-  if(!select){
-   console.error("[MODELOS] No existe el select #modelo")
-   return
-  }
-
-  select.innerHTML = `<option value="">Seleccione un modelo</option>`
-
-  if(!Array.isArray(modelos)){
-   console.error("[MODELOS] El backend no devolvió un array:", modelos)
-   return
-  }
-
-  modelos.forEach(m=>{
-   console.log("[MODELOS] Agregando opción:", m)
-   select.innerHTML += `<option value="${m}">${m}</option>`
-  })
-
-  console.log("[MODELOS] Total modelos cargados:", modelos.length)
-
- }catch(err){
-
-  console.error("[MODELOS] Error cargando modelos:", err)
-
- }
-
+ modelos.forEach(m=>{
+  select.innerHTML += `<option value="${m}">${m.toUpperCase()}</option>`
+ })
 }
-
 
 /*
 ========================================================
 CARGAR VERSIONES
 ========================================================
 */
-
 async function cargarVersiones(){
 
- const marca = document.getElementById("marca").value
- const modelo = document.getElementById("modelo").value
+ const marca = normalizar(
+  document.getElementById("marca").value
+ )
 
- console.log("[VERSIONES] Marca:", marca)
- console.log("[VERSIONES] Modelo:", modelo)
+ const modelo = normalizar(
+  document.getElementById("modelo").value
+ )
 
- if(!marca || !modelo){
-  console.warn("[VERSIONES] Faltan datos")
-  return
- }
+ if(!marca || !modelo) return
 
- try{
+ limpiarSelect("version")
+ limpiarSelect("anio")
 
-  const url = `${API}/versiones/${marca}/${modelo}`
+ const versiones =
+  await fetchSafe(`${API}/versiones/${marca}/${modelo}`)
 
-  console.log("[VERSIONES] Fetch URL:", url)
+ if(!Array.isArray(versiones)) return
 
-  const res = await fetch(url)
+ const select = document.getElementById("version")
 
-  console.log("[VERSIONES] Response status:", res.status)
-
-  if(!res.ok){
-   console.error("[VERSIONES] Error HTTP:", res.status)
-   return
-  }
-
-  const versiones = await res.json()
-
-  console.log("[VERSIONES] Datos recibidos:", versiones)
-
-  const select = document.getElementById("version")
-
-  if(!select){
-   console.error("[VERSIONES] No existe el select #version")
-   return
-  }
-
-  select.innerHTML = `<option value="">Seleccione una versión</option>`
-
-  if(!Array.isArray(versiones)){
-   console.error("[VERSIONES] El backend no devolvió un array:", versiones)
-   return
-  }
-
-  versiones.forEach(v=>{
-   console.log("[VERSIONES] Agregando opción:", v)
-   select.innerHTML += `<option value="${v}">${v}</option>`
-  })
-
-  console.log("[VERSIONES] Total versiones cargadas:", versiones.length)
-
- }catch(err){
-
-  console.error("[VERSIONES] Error cargando versiones:", err)
-
- }
-
+ versiones.forEach(v=>{
+  select.innerHTML += `<option value="${v}">${v.toUpperCase()}</option>`
+ })
 }
-
 
 /*
 ========================================================
 CARGAR AÑOS
 ========================================================
 */
-
 async function cargarAnios(){
 
- const marca = document.getElementById("marca").value
- const modelo = document.getElementById("modelo").value
- const version = document.getElementById("version").value
+ const marca = normalizar(
+  document.getElementById("marca").value
+ )
 
- console.log("[AÑOS] Marca:", marca)
- console.log("[AÑOS] Modelo:", modelo)
- console.log("[AÑOS] Version:", version)
+ const modelo = normalizar(
+  document.getElementById("modelo").value
+ )
 
- if(!marca || !modelo || !version){
-  console.warn("[AÑOS] Faltan datos")
-  return
- }
+ const version = normalizar(
+  document.getElementById("version").value
+ )
 
- try{
+ if(!marca || !modelo || !version) return
 
-  const url = `${API}/anios/${marca}/${modelo}/${version}`
+ limpiarSelect("anio")
 
-  console.log("[AÑOS] Fetch URL:", url)
+ const anios =
+  await fetchSafe(`${API}/anios/${marca}/${modelo}/${version}`)
 
-  const res = await fetch(url)
+ if(!Array.isArray(anios)) return
 
-  console.log("[AÑOS] Response status:", res.status)
+ const select = document.getElementById("anio")
 
-  if(!res.ok){
-   console.error("[AÑOS] Error HTTP:", res.status)
-   return
-  }
-
-  const anios = await res.json()
-
-  console.log("[AÑOS] Datos recibidos:", anios)
-
-  const select = document.getElementById("anio")
-
-  if(!select){
-   console.error("[AÑOS] No existe el select #anio")
-   return
-  }
-
-  select.innerHTML = `<option value="">Seleccione un año</option>`
-
-  if(!Array.isArray(anios)){
-   console.error("[AÑOS] El backend no devolvió un array:", anios)
-   return
-  }
-
-  anios.forEach(a=>{
-   console.log("[AÑOS] Agregando opción:", a)
-   select.innerHTML += `<option value="${a}">${a}</option>`
-  })
-
-  console.log("[AÑOS] Total años cargados:", anios.length)
-
- }catch(err){
-
-  console.error("[AÑOS] Error cargando años:", err)
-
- }
-
+ anios.forEach(a=>{
+  select.innerHTML += `<option value="${a}">${a}</option>`
+ })
 }
-
 
 /*
 ========================================================
-COTIZAR VEHÍCULO
+COTIZAR
 ========================================================
 */
-
 async function cotizar(){
 
- const marca = document.getElementById("marca").value
- const modelo = document.getElementById("modelo").value
- const version = document.getElementById("version").value
+ const marca = normalizar(document.getElementById("marca").value)
+ const modelo = normalizar(document.getElementById("modelo").value)
+ const version = normalizar(document.getElementById("version").value)
  const anio = document.getElementById("anio").value
- const km = document.getElementById("km").value
+ const km = Number(document.getElementById("km").value)
 
- console.log("[COTIZAR] Datos enviados:",{
-  marca,modelo,version,anio,km
- })
+ const data = await fetch(`${API}/cotizar`,{
 
- try{
+  method:"POST",
 
-  const url = `${API}/cotizar`
+  headers:{
+   "Content-Type":"application/json",
+   "Authorization":"Bearer "+localStorage.getItem("token")
+  },
 
-  console.log("[COTIZAR] Fetch URL:", url)
-
-  const res = await fetch(url,{
-
-   method:"POST",
-
-   headers:{
-    "Content-Type":"application/json",
-    "Authorization":"Bearer "+localStorage.getItem("token")
-   },
-
-   body: JSON.stringify({
-   marca: marca.toLowerCase(),
-   modelo: modelo.toLowerCase(),
-   version: version.toLowerCase(),
+  body: JSON.stringify({
+   marca,
+   modelo,
+   version,
    anio,
    km
-})
-
   })
 
-  console.log("[COTIZAR] Response status:", res.status)
+ }).then(r=>r.json())
+  .catch(err=>{
+   console.error(err)
+   return null
+  })
 
-  const data = await res.json()
+ if(!data || data.error){
+  console.error("❌ Error cotizar:", data)
+  alert(data?.error || "Error cotizando")
+  return
+ }
 
-  console.log("[COTIZAR] Respuesta backend:", data)
-
-  document.getElementById("resultado").innerHTML = `
+ document.getElementById("resultado").innerHTML = `
   Precio mercado: $${data.precioBase.toLocaleString()}
   <br><br>
   Descuento por KM: ${data.descuentoKM} %
   <br><br>
   <strong>
-  Precio sugerido: $${data.precioSugerido.toLocaleString()}
+  Precio sugerido: $${data.precioFinal.toLocaleString()}
   </strong>
-  `
-
- }catch(err){
-
-  console.error("[COTIZAR] Error cotizando:", err)
-
- }
-
+ `
 }
 
+/*
+========================================================
+HELPERS UI
+========================================================
+*/
+function limpiarSelect(id){
+ const select = document.getElementById(id)
+ if(select){
+  select.innerHTML = `<option value="">Seleccione</option>`
+ }
+}
 
 /*
 ========================================================
 INIT
 ========================================================
 */
-
 window.onload = ()=>{
- console.log("[INIT] Página cargada")
  cargarMarcas()
 }
