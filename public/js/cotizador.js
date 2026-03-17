@@ -31,7 +31,7 @@ async function cargarConfig(){
 
  try{
 
-  const res = await fetch(`${API}/getMarcas`)
+  const res = await fetch(`${API}/marcas`)
   const data = await res.json()
 
   // 🔥 Si backend devuelve objeto en vez de array
