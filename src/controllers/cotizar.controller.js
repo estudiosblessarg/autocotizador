@@ -1,78 +1,139 @@
 const { db } = require("../config/firebase")
 
-exports.cotizar = async (req, res) => {
+// ================= NORMALIZAR =================
+function normalizar(str) {
+ return str
+  .toLowerCase()
+  .trim()
+}
 
+// ================= TRAER CONFIG =================
+async function getConfig() {
+ const doc = await db.collection("config").doc("autos").get()
+
+ if (!doc.exists) return null
+
+ return doc.data().data || {}
+}
+
+// ================= MARCAS =================
+exports.getMarcas = async (req, res) => {
+ try {
+  const config = await getConfig()
+
+  if (!config) {
+   return res.status(400).json({ error: "No config/autos" })
+  }
+
+  const marcas = Object.keys(config)
+
+  res.json(marcas) // ✅ ARRAY
+ } catch (err) {
+  res.status(500).json({ error: err.message })
+ }
+}
+
+// ================= MODELOS =================
+exports.getModelos = async (req, res) => {
+ try {
+  const { marca } = req.params
+
+  const config = await getConfig()
+
+  if (!config[marca]) {
+   return res.status(400).json({ error: "Marca no encontrada" })
+  }
+
+  const modelos = Object.keys(config[marca])
+
+  res.json(modelos) // ✅ ARRAY
+ } catch (err) {
+  res.status(500).json({ error: err.message })
+ }
+}
+
+// ================= VERSIONES =================
+exports.getVersiones = async (req, res) => {
+ try {
+  const { marca, modelo } = req.params
+
+  const config = await getConfig()
+
+  if (!config[marca]?.[modelo]) {
+   return res.status(400).json({ error: "Modelo no encontrado" })
+  }
+
+  const versiones = config[marca][modelo]
+
+  res.json(versiones) // ✅ ARRAY
+ } catch (err) {
+  res.status(500).json({ error: err.message })
+ }
+}
+
+// ================= AÑOS (SIMULADO) =================
+exports.getAnios = async (req, res) => {
+ try {
+  // 🔥 opcional si no tenés años en DB
+  res.json([2024, 2023, 2022, 2021, 2020])
+ } catch (err) {
+  res.status(500).json({ error: err.message })
+ }
+}
+
+// ================= COTIZAR =================
+exports.cotizar = async (req, res) => {
  try {
 
   const { marca, modelo, km } = req.body
 
-  // ================= TRAER CONFIG =================
-  const configDoc = await db
-   .collection("config")
-   .doc("autos")
-   .get()
+  const config = await getConfig()
 
-  if (!configDoc.exists) {
-   return res.status(400).json({
-    error: "No existe config/autos"
-   })
-  }
-
-  const config = configDoc.data().data || {}
-
-  // ================= VALIDACIONES =================
-  if (!marca || !config[marca]) {
+  if (!config || !config[marca]) {
    return res.status(400).json({
     error: "Marca no encontrada",
-    marcas: Object.keys(config) // 🔥 array
+    marcas: Object.keys(config || {})
    })
   }
 
-  if (!modelo || !config[marca][modelo]) {
+  if (!config[marca][modelo]) {
    return res.status(400).json({
     error: "Modelo no encontrado",
-    modelos: Object.keys(config[marca]) // 🔥 array
+    modelos: Object.keys(config[marca])
    })
   }
 
-  const versiones = config[marca][modelo] // 🔥 ARRAY
+  const versiones = config[marca][modelo]
 
-  // ================= TRAER PRECIOS =================
   let precios = []
 
   for (const version of versiones) {
 
-   const snap = await db
+   const doc = await db
     .collection("marcas")
-    .doc(marca.toLowerCase())
+    .doc(normalizar(marca))
     .collection("modelos")
-    .doc(modelo.toLowerCase())
+    .doc(normalizar(modelo))
     .collection("versiones")
-    .doc(version.toLowerCase())
+    .doc(normalizar(version))
     .get()
 
-   if (snap.exists) {
-    const data = snap.data()
-
-    if (data.precio_usd) {
-     precios.push(data.precio_usd)
-    }
+   if (doc.exists) {
+    const data = doc.data()
+    if (data.precio_usd) precios.push(data.precio_usd)
    }
   }
 
-  // ================= FALLBACK =================
   if (precios.length === 0) {
    return res.status(400).json({
     error: "No hay precios",
-    versiones // 🔥 array
+    versiones
    })
   }
 
-  // ================= PROMEDIO =================
   const promedio =
    precios.reduce((a, b) => a + b, 0) / precios.length
 
-  // ================= AJUSTE KM =================
   let ajusteKm = 0
 
   if (km > 100000) ajusteKm = 0.15
@@ -82,21 +143,15 @@ exports.cotizar = async (req, res) => {
   const precioFinal =
    Math.round(promedio - (promedio * ajusteKm))
 
-  // ================= RESPUESTA CORRECTA =================
   res.json({
-   versiones, // 🔥 ARRAY (clave para frontend)
-   precios,   // 🔥 ARRAY
+   versiones,
+   precios,
    precioBase: Math.round(promedio),
-   precioFinal
+   precioFinal,
+   descuentoKM: ajusteKm * 100
   })
 
  } catch (err) {
-
-  console.error(err)
-
-  res.status(500).json({
-   error: err.message
-  })
-
+  res.status(500).json({ error: err.message })
  }
 }
