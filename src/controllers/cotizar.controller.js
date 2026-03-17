@@ -9,11 +9,22 @@ function normalizar(str) {
 
 // ================= TRAER CONFIG =================
 async function getConfig() {
- const doc = await db.collection("config").doc("autos").get()
 
- if (!doc.exists) return null
+ const snap = await db
+  .collection("config")
+  .doc("autos")
+  .collection("OTRA")
+  .get()
 
- return doc.data().data || {}
+ if (snap.empty) return {}
+
+ const config = {}
+
+ snap.forEach(doc => {
+  config[doc.id] = doc.data()
+ })
+
+ return config
 }
 
 // ================= MARCAS =================
