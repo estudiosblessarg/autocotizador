@@ -4,56 +4,67 @@ exports.cotizar = async (req, res) => {
 
  try {
 
-  const { marca, modelo, anio, km } = req.body
+  const { marca, modelo, km } = req.body
 
-  let query = db.collectionGroup("versiones")
+  // ================= TRAER CONFIG =================
+  const configDoc = await db
+   .collection("config")
+   .doc("autos")
+   .get()
 
-  // ================= FILTROS OPCIONALES =================
-  if (marca) {
-   query = query.where("marca", "==", marca)
-  }
-
-  if (modelo) {
-   query = query.where("modelo", "==", modelo)
-  }
-
-  // ⚠️ anio no existe en tu data actual → lo dejo opcional
-  if (anio) {
-   query = query.where("anio", "==", Number(anio))
-  }
-
-  let snap = await query.get()
-
-  // ================= FALLBACK: TRAER TODO =================
-  if (snap.empty) {
-
-   console.log("⚠️ Sin resultados filtrados → trayendo todo")
-
-   snap = await db.collectionGroup("versiones").get()
-  }
-
-  if (snap.empty) {
+  if (!configDoc.exists) {
    return res.status(400).json({
-    error: "No hay datos en la base"
+    error: "No existe config/autos"
    })
   }
 
-  const precios = []
+  const config = configDoc.data().data || {}
 
-  snap.forEach(doc => {
-   const data = doc.data()
+  // ================= VALIDACIONES =================
+  if (!marca || !config[marca]) {
+   return res.status(400).json({
+    error: "Marca no encontrada",
+    marcas: Object.keys(config) // 🔥 array
+   })
+  }
 
-   // 🔥 validación fuerte
-   if (data.precio_usd || data.precio) {
-    precios.push(
-     data.precio_usd || data.precio
-    )
+  if (!modelo || !config[marca][modelo]) {
+   return res.status(400).json({
+    error: "Modelo no encontrado",
+    modelos: Object.keys(config[marca]) // 🔥 array
+   })
+  }
+
+  const versiones = config[marca][modelo] // 🔥 ARRAY
+
+  // ================= TRAER PRECIOS =================
+  let precios = []
+
+  for (const version of versiones) {
+
+   const snap = await db
+    .collection("marcas")
+    .doc(marca.toLowerCase())
+    .collection("modelos")
+    .doc(modelo.toLowerCase())
+    .collection("versiones")
+    .doc(version.toLowerCase())
+    .get()
+
+   if (snap.exists) {
+    const data = snap.data()
+
+    if (data.precio_usd) {
+     precios.push(data.precio_usd)
+    }
    }
-  })
+  }
 
+  // ================= FALLBACK =================
   if (precios.length === 0) {
    return res.status(400).json({
-    error: "No hay precios válidos"
+    error: "No hay precios",
+    versiones // 🔥 array
    })
   }
 
@@ -71,8 +82,10 @@ exports.cotizar = async (req, res) => {
   const precioFinal =
    Math.round(promedio - (promedio * ajusteKm))
 
+  // ================= RESPUESTA CORRECTA =================
   res.json({
-   usados: precios.length,
+   versiones, // 🔥 ARRAY (clave para frontend)
+   precios,   // 🔥 ARRAY
    precioBase: Math.round(promedio),
    precioFinal
   })
