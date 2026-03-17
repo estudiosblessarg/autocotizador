@@ -1,3 +1,20 @@
+/*
+========================================================
+CERRAR SESIÓN
+========================================================
+*/
+
+function logout(){
+ localStorage.removeItem("token")
+ localStorage.removeItem("user")
+ window.location.href = "login.html"
+}
+
+
+
+
+
+
 // ================= NORMALIZAR =================
 function normalizar(str){
  return str.toLowerCase().trim()
