@@ -3,47 +3,33 @@ function normalizar(str){
  return str.toLowerCase().trim()
 }
 
-/*
-========================================================
-CERRAR SESIÓN
-========================================================
-*/
-function logout(){
- localStorage.removeItem("token")
- localStorage.removeItem("user")
- window.location.href = "login.html"
-}
-
-/*
-========================================================
-CONFIG API
-========================================================
-*/
+// ================= API =================
 const API = "/api/auth/cotizador"
 
-/*
-========================================================
-HELPER FETCH
-========================================================
-*/
-async function fetchSafe(url){
+// ================= CACHE CONFIG =================
+let CONFIG = null
+
+// ================= FETCH CONFIG =================
+async function cargarConfig(){
 
  try{
 
-  const res = await fetch(url)
-
+  const res = await fetch(`${API}/marcas`)
   const data = await res.json()
 
-  if(!res.ok){
-   console.error("❌ Backend error:", data)
-   return null
+  // 🔥 Si backend devuelve objeto en vez de array
+  if(typeof data === "object" && !Array.isArray(data)){
+   CONFIG = data
+  }else{
+   // si sigue devolviendo array lo convertimos
+   CONFIG = {}
+   data.forEach(m => CONFIG[m] = {})
   }
 
-  return data
+  console.log("✅ CONFIG:", CONFIG)
 
  }catch(err){
-  console.error("❌ Fetch error:", err)
-  return null
+  console.error("❌ Error cargando config", err)
  }
 }
 
@@ -52,18 +38,13 @@ async function fetchSafe(url){
 CARGAR MARCAS
 ========================================================
 */
-async function cargarMarcas(){
-
- const marcas = await fetchSafe(`${API}/marcas`)
-
- if(!Array.isArray(marcas)){
-  console.error("❌ marcas no es array", marcas)
-  return
- }
+function cargarMarcas(){
 
  const select = document.getElementById("marca")
 
  select.innerHTML = `<option value="">Seleccione una marca</option>`
+
+ const marcas = Object.keys(CONFIG || {})
 
  marcas.forEach(m=>{
   select.innerHTML += `<option value="${m}">${m.toUpperCase()}</option>`
@@ -75,22 +56,19 @@ async function cargarMarcas(){
 CARGAR MODELOS
 ========================================================
 */
-async function cargarModelos(){
+function cargarModelos(){
 
  const marca = normalizar(
   document.getElementById("marca").value
  )
 
- if(!marca) return
-
  limpiarSelect("modelo")
  limpiarSelect("version")
  limpiarSelect("anio")
 
- const modelos =
-  await fetchSafe(`${API}/modelos/${marca}`)
+ if(!marca || !CONFIG[marca]) return
 
- if(!Array.isArray(modelos)) return
+ const modelos = Object.keys(CONFIG[marca])
 
  const select = document.getElementById("modelo")
 
@@ -104,7 +82,7 @@ async function cargarModelos(){
 CARGAR VERSIONES
 ========================================================
 */
-async function cargarVersiones(){
+function cargarVersiones(){
 
  const marca = normalizar(
   document.getElementById("marca").value
@@ -114,15 +92,12 @@ async function cargarVersiones(){
   document.getElementById("modelo").value
  )
 
- if(!marca || !modelo) return
-
  limpiarSelect("version")
  limpiarSelect("anio")
 
- const versiones =
-  await fetchSafe(`${API}/versiones/${marca}/${modelo}`)
+ if(!marca || !modelo) return
 
- if(!Array.isArray(versiones)) return
+ const versiones = CONFIG[marca]?.[modelo] || []
 
  const select = document.getElementById("version")
 
@@ -136,30 +111,14 @@ async function cargarVersiones(){
 CARGAR AÑOS
 ========================================================
 */
-async function cargarAnios(){
-
- const marca = normalizar(
-  document.getElementById("marca").value
- )
-
- const modelo = normalizar(
-  document.getElementById("modelo").value
- )
-
- const version = normalizar(
-  document.getElementById("version").value
- )
-
- if(!marca || !modelo || !version) return
+function cargarAnios(){
 
  limpiarSelect("anio")
 
- const anios =
-  await fetchSafe(`${API}/anios/${marca}/${modelo}/${version}`)
-
- if(!Array.isArray(anios)) return
-
  const select = document.getElementById("anio")
+
+ // 🔥 hardcode por ahora
+ const anios = [2024,2023,2022,2021,2020]
 
  anios.forEach(a=>{
   select.innerHTML += `<option value="${a}">${a}</option>`
@@ -179,49 +138,53 @@ async function cotizar(){
  const anio = document.getElementById("anio").value
  const km = Number(document.getElementById("km").value)
 
- const data = await fetch(`${API}/cotizar`,{
+ try{
 
-  method:"POST",
+  const res = await fetch(`${API}/cotizar`,{
 
-  headers:{
-   "Content-Type":"application/json",
-   "Authorization":"Bearer "+localStorage.getItem("token")
-  },
+   method:"POST",
 
-  body: JSON.stringify({
-   marca,
-   modelo,
-   version,
-   anio,
-   km
+   headers:{
+    "Content-Type":"application/json",
+    "Authorization":"Bearer "+localStorage.getItem("token")
+   },
+
+   body: JSON.stringify({
+    marca,
+    modelo,
+    version,
+    anio,
+    km
+   })
+
   })
 
- }).then(r=>r.json())
-  .catch(err=>{
-   console.error(err)
-   return null
-  })
+  const data = await res.json()
 
- if(!data || data.error){
-  console.error("❌ Error cotizar:", data)
-  alert(data?.error || "Error cotizando")
-  return
+  if(!res.ok){
+   console.error("❌ Error:", data)
+   alert(data.error)
+   return
+  }
+
+  document.getElementById("resultado").innerHTML = `
+   Precio mercado: $${data.precioBase.toLocaleString()}
+   <br><br>
+   Descuento por KM: ${data.descuentoKM} %
+   <br><br>
+   <strong>
+   Precio sugerido: $${data.precioFinal.toLocaleString()}
+   </strong>
+  `
+
+ }catch(err){
+  console.error(err)
  }
-
- document.getElementById("resultado").innerHTML = `
-  Precio mercado: $${data.precioBase.toLocaleString()}
-  <br><br>
-  Descuento por KM: ${data.descuentoKM} %
-  <br><br>
-  <strong>
-  Precio sugerido: $${data.precioFinal.toLocaleString()}
-  </strong>
- `
 }
 
 /*
 ========================================================
-HELPERS UI
+HELPERS
 ========================================================
 */
 function limpiarSelect(id){
@@ -236,6 +199,7 @@ function limpiarSelect(id){
 INIT
 ========================================================
 */
-window.onload = ()=>{
+window.onload = async ()=>{
+ await cargarConfig()
  cargarMarcas()
 }
