@@ -25,7 +25,7 @@ exports.getCotizaciones = async(req,res)=>{
 
 
 
-exports.update = async(req,res)=>{
+exports.updateCotizacion = async(req,res)=>{
 
  try{
 
@@ -47,7 +47,7 @@ exports.update = async(req,res)=>{
 
 
 
-exports.delete = async(req,res)=>{
+exports.deleteCotizacion = async(req,res)=>{
 
  try{
 
