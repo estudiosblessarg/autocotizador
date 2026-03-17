@@ -53,10 +53,7 @@ else if (data.data && Array.isArray(data.data)) {
 }
 else {
  console.error("❌ Formato inválido:", data)
-}else{
-   CONFIG = {}
-   data.forEach(m => CONFIG[m] = {})
-  }
+}
 
   console.log("✅ CONFIG:", CONFIG)
 
