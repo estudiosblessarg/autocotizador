@@ -3,30 +3,9 @@ const cors = require("cors")
 const path = require("path")
 
 const authRoutes = require("./src/routes/auth.routes")
-
-const { cargarDesdeJson } = require("./src/services/precios.service")
+const { cargarDesdeJSON } = require("./src/services/precios.service")
 
 const app = express()
-
-async function iniciarSistema(){
-
- try{
-
-  console.log("Inicializando precios ACARA...")
-
-  await actualizarSiNecesario()
-
-  console.log("Precios cargados")
-
- }catch(err){
-
-  console.error("Error cargando precios:",err)
-
- }
-
-}
-
-iniciarSistema()
 
 // ======================
 // MIDDLEWARE
@@ -70,6 +49,14 @@ app.get("/",(req,res)=>{
 
 const PORT = process.env.PORT || 3000
 
-app.listen(PORT,()=>{
- console.log("SERVER RUNNING ON PORT",PORT)
+app.listen(PORT, async ()=>{
+ console.log("🚀 SERVER RUNNING ON PORT",PORT)
+
+ // 🔥 cargar sin bloquear
+ console.log("Inicializando precios...")
+
+ cargarDesdeJSON()
+  .then(()=> console.log("✅ Precios cargados"))
+  .catch(err => console.error("❌ Error cargando precios:", err))
+
 })
