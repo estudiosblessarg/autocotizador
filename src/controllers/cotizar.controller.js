@@ -11,9 +11,9 @@ function normalizar(str) {
 async function getConfig() {
 
  const snap = await db
-  .collection("marcas")
-  .doc("otra")
-  .collection("modelos")
+  .collection("config")
+  .doc("autos")
+  .collection("data")
   .get()
 
  console.log("🔥 DOCS EN FIREBASE:", snap.size)
