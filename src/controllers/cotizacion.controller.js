@@ -1,6 +1,6 @@
 const {db} = require("../config/firebase")
 
-exports.getAll = async(req,res)=>{
+exports.getCotizaciones = async(req,res)=>{
 
  try{
 
