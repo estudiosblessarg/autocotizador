@@ -7,7 +7,7 @@ exports.cotizar=async(req,res)=>{
   const {marca,modelo,anio,km}=req.body
 
   const snap=
-   await db.collection("precios")
+   await db.collection("autos")
     .where("marca","==",marca)
     .where("modelo","==",modelo)
     .where("anio","==",Number(anio))
