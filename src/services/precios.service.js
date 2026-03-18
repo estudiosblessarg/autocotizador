@@ -38,99 +38,83 @@ async function cargarDesdeJSON() {
 
  const data = await fs.readJson(JSON_PATH)
 
- console.log("📦 Autos en JSON:", data.length)
+ console.log("📦 Marcas en JSON:", Object.keys(data).length)
 
  let batch = db.batch()
  let operaciones = 0
  let total = 0
 
- // 🔥 NUEVO: estructura para config
- const configAutos = {}
+ // 🔥 ahora el JSON YA es config
+ const configAutos = data
 
- for (const auto of data) {
+ for (const [marca, marcaData] of Object.entries(data)) {
 
-  try {
+  const marcaId = normalizar(marca)
+  const marcaRef = db.collection("marcas").doc(marcaId)
 
-   const { modelo, version, precio } = auto
+  batch.set(marcaRef, { nombre: marca }, { merge: true })
 
-   if (!modelo || !version || !precio) continue
+  for (const [modelo, modeloData] of Object.entries(marcaData.modelos || {})) {
 
-   const marca =
-    detectarMarcaDesdeModelo(modelo)
-
-   const marcaId = normalizar(marca)
    const modeloId = normalizar(modelo)
-   const versionId = normalizar(version)
-
-   // ================= REFERENCES =================
-
-   const marcaRef =
-    db.collection("marcas").doc(marcaId)
-
-   const modeloRef =
-    marcaRef.collection("modelos").doc(modeloId)
-
-   const versionRef =
-    modeloRef.collection("versiones").doc(versionId)
-
-   // ================= DATA =================
-
-   batch.set(marcaRef, {
-    nombre: marca
-   }, { merge: true })
+   const modeloRef = marcaRef.collection("modelos").doc(modeloId)
 
    batch.set(modeloRef, {
     nombre: modelo,
     marca: marca
    }, { merge: true })
 
-   batch.set(versionRef, {
-    nombre: version,
-    precio_usd: precio,
-    precio_ars: Math.round(precio * USD_TO_ARS),
-    updatedAt: new Date()
-   })
+   for (const [version, versionData] of Object.entries(modeloData.versiones || {})) {
 
-   // ================= CONFIG (NUEVO) =================
+    const versionId = normalizar(version)
+    const versionRef = modeloRef.collection("versiones").doc(versionId)
 
-   if (!configAutos[marca]) {
-    configAutos[marca] = {}
+    // 🔥 Tomamos el primer año como referencia de precio
+    const anios = versionData.anios || {}
+    const primerAnio = Object.keys(anios)[0]
+    const precio = anios[primerAnio]
+
+    batch.set(versionRef, {
+     nombre: version,
+     precio_usd: precio || 0,
+     precio_ars: precio ? Math.round(precio * USD_TO_ARS) : 0,
+     updatedAt: new Date()
+    })
+
+    total++
+    operaciones++
+
+    console.log(`🚗 ${marca} | ${modelo} | ${version} | 💰 ${precio}`)
+
+    if (operaciones >= 400) {
+     await batch.commit()
+     console.log("💾 Batch guardado...")
+     batch = db.batch()
+     operaciones = 0
+    }
+
    }
-
-   if (!configAutos[marca][modelo]) {
-    configAutos[marca][modelo] = []
-   }
-
-   if (!configAutos[marca][modelo].includes(version)) {
-    configAutos[marca][modelo].push(version)
-   }
-
-   operaciones++
-   total++
-
-   console.log(
-    `🚗 ${marca} | ${modelo} | ${version} | 💰 ${precio}`
-   )
-
-   if (operaciones >= 400) {
-
-    await batch.commit()
-
-    console.log("💾 Batch guardado...")
-
-    batch = db.batch()
-    operaciones = 0
-   }
-
-  } catch (err) {
-   console.error("❌ Error:", err)
   }
  }
 
- // Guardar lo que queda
- if (operaciones > 0)
+ // guardar resto
+ if (operaciones > 0) {
   await batch.commit()
+ }
 
+ // 🔥 guardamos config directo (ya viene perfecto)
+ await db.collection("config").doc("autos").set({
+  data: configAutos,
+  updatedAt: new Date()
+ })
+
+ console.log("\n========================")
+ console.log("✅ CARGA COMPLETA")
+ console.log("========================")
+ console.log("🚗 Total versiones:", total)
+ console.log("🧠 Config guardada en config/autos")
+ console.log("========================\n")
+}
  // ================= GUARDAR CONFIG =================
 
  await db.collection("config").doc("autos").set({
