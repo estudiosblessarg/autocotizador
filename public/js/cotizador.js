@@ -21,46 +21,204 @@ const API = "/api/auth/cotizador"
 let DOLAR = 0
 let REGLAS_KM = []
 
+// ================= LOGGER PRO =================
+function logRequest(label, url, options){
+ console.group(`🌐 ${label}`)
+ console.log("➡️ URL:", url)
+ console.log("⚙️ Options:", options || {})
+ console.groupEnd()
+}
+
+function logResponse(label, res, raw){
+ console.group(`📥 ${label}`)
+ console.log("✅ Status:", res.status, res.statusText)
+ console.log("📦 Content-Type:", res.headers.get("content-type"))
+ console.log("📄 Raw Response:", raw)
+ console.groupEnd()
+}
+
+function logError(label, err){
+ console.group(`❌ ${label}`)
+ console.error(err)
+ console.groupEnd()
+}
+
+// ================= FETCH PRO =================
+async function fetchPro(url, options = {}){
+
+ logRequest("REQUEST", url, options)
+
+ try{
+  const res = await fetch(url, options)
+
+  const contentType = res.headers.get("content-type") || ""
+
+  let raw = await res.text()
+
+  logResponse("RESPONSE", res, raw)
+
+  // 🔥 Intentar parsear JSON si corresponde
+  if(contentType.includes("application/json")){
+   try{
+    const json = JSON.parse(raw)
+    return { ok: res.ok, data: json, status: res.status }
+   }catch(parseError){
+    throw new Error("Respuesta JSON inválida")
+   }
+  }
+
+  // 🔥 HTML (error típico backend)
+  if(contentType.includes("text/html")){
+   console.warn("⚠️ El servidor devolvió HTML (posible error 404 o backend caído)")
+   return { ok: false, data: raw, status: res.status }
+  }
+
+  // 🔥 Texto plano u otro formato
+  return { ok: res.ok, data: raw, status: res.status }
+
+ }catch(err){
+  logError("FETCH ERROR", err)
+  return { ok: false, error: err.message }
+ }
+}
+
+// ================= DÓLAR =================
 async function cargarDolar(){
  try{
-  const res = await fetch(`${API}/dolar`)
-  const data = await res.json()
 
-  DOLAR = data.usd || 0
+  const res = await fetchPro(`${API}/dolar`)
 
-  console.log("💵 Dólar:", DOLAR)
+  if(!res.ok){
+   console.warn("⚠️ No se pudo obtener dólar")
+   return
+  }
+
+  const data = res.data
+
+  if(typeof data !== "object"){
+   console.warn("⚠️ Dólar no es objeto válido:", data)
+   return
+  }
+
+  DOLAR = Number(data.usd) || 0
+
+  console.log("💵 Dólar cargado:", DOLAR)
 
  }catch(err){
-  console.error("❌ Error dólar:", err)
+  logError("ERROR DÓLAR", err)
  }
 }
 
+// ================= KM =================
 async function cargarReglasKM(){
  try{
-  const res = await fetch(`${API}/km`)
-  const data = await res.json()
 
-  REGLAS_KM = data.reglas || []
+  const res = await fetchPro(`${API}/km`)
 
-  console.log("🚗 Reglas KM:", REGLAS_KM)
+  if(!res.ok){
+   console.warn("⚠️ No se pudo obtener reglas KM")
+   return
+  }
+
+  const data = res.data
+
+  if(typeof data !== "object"){
+   console.warn("⚠️ KM inválido:", data)
+   return
+  }
+
+  if(!Array.isArray(data.reglas)){
+   console.warn("⚠️ reglas no es array:", data.reglas)
+   REGLAS_KM = []
+   return
+  }
+
+  REGLAS_KM = data.reglas
+
+  console.log("🚗 Reglas KM cargadas:", REGLAS_KM)
 
  }catch(err){
-  console.error("❌ Error KM:", err)
+  logError("ERROR KM", err)
  }
 }
 
+// ================= LÓGICA KM =================
 function obtenerDescuentoKM(km){
+
+ if(!Array.isArray(REGLAS_KM)){
+  console.warn("⚠️ REGLAS_KM corrupto:", REGLAS_KM)
+  return 0
+ }
+
  for(const regla of REGLAS_KM){
+
+  if(
+   typeof regla !== "object" ||
+   regla.min === undefined ||
+   regla.max === undefined
+  ){
+   console.warn("⚠️ Regla inválida:", regla)
+   continue
+  }
+
   if(km >= regla.min && km <= regla.max){
-   return regla.descuento
+   return Number(regla.descuento) || 0
   }
  }
+
  return 0
 }
 
 // ================= HELPERS =================
 function limpiarSelect(id){
  const select = document.getElementById(id)
+ if(select){
+  select.innerHTML = `<option value="">Seleccione</option>`
+ }
+}
+
+function cargarOpciones(selectId, lista){
+
+ const select = document.getElementById(selectId)
+
+ if(!select){
+  console.warn("⚠️ Select no encontrado:", selectId)
+  return
+ }
+
+ // limpiar siempre
+ select.innerHTML = `<option value="">Seleccione</option>`
+
+ let array = []
+
+ // 🔥 detección inteligente
+ if (Array.isArray(lista)) {
+  array = lista
+ }
+ else if (typeof lista === "object" && lista !== null) {
+  array = Object.keys(lista)
+ }
+ else if (typeof lista === "string") {
+  console.warn("⚠️ Recibí string (posible HTML o error):", lista)
+  return
+ }
+ else {
+  console.error("❌ Tipo no soportado:", lista)
+  return
+ }
+
+ // eliminar duplicados
+ const unicos = [...new Set(array)]
+
+ console.log(`📊 Opciones (${selectId}):`, unicos)
+
+ unicos.forEach(item=>{
+  select.innerHTML += `
+   <option value="${item}">
+    ${String(item).toUpperCase()}
+   </option>`
+ })
+} const select = document.getElementById(id)
  if(select){
   select.innerHTML = `<option value="">Seleccione</option>`
  }
