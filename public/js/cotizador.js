@@ -17,6 +17,47 @@ function normalizar(str){
 // ================= API =================
 const API = "/api/auth/cotizador"
 
+// ================= CONFIG EXTERNA =================
+let DOLAR = 0
+let REGLAS_KM = []
+
+async function cargarDolar(){
+ try{
+  const res = await fetch("/api/dolar")
+  const data = await res.json()
+
+  DOLAR = data.usd || 0
+
+  console.log("💵 Dólar:", DOLAR)
+
+ }catch(err){
+  console.error("❌ Error dólar:", err)
+ }
+}
+
+async function cargarReglasKM(){
+ try{
+  const res = await fetch("/api/km")
+  const data = await res.json()
+
+  REGLAS_KM = data.reglas || []
+
+  console.log("🚗 Reglas KM:", REGLAS_KM)
+
+ }catch(err){
+  console.error("❌ Error KM:", err)
+ }
+}
+
+function obtenerDescuentoKM(km){
+ for(const regla of REGLAS_KM){
+  if(km >= regla.min && km <= regla.max){
+   return regla.descuento
+  }
+ }
+ return 0
+}
+
 // ================= HELPERS =================
 function limpiarSelect(id){
  const select = document.getElementById(id)
@@ -28,6 +69,9 @@ function limpiarSelect(id){
 function cargarOpciones(selectId, lista){
 
  const select = document.getElementById(selectId)
+
+ // 🔥 limpiar SIEMPRE para evitar duplicados
+ select.innerHTML = `<option value="">Seleccione</option>`
 
  let array = []
 
@@ -42,8 +86,14 @@ function cargarOpciones(selectId, lista){
   return
  }
 
- array.forEach(item=>{
-  select.innerHTML += `<option value="${item}">${String(item).toUpperCase()}</option>`
+ // 🔥 eliminar duplicados reales
+ const unicos = [...new Set(array)]
+
+ unicos.forEach(item=>{
+  select.innerHTML += `
+   <option value="${item}">
+    ${String(item).toUpperCase()}
+   </option>`
  })
 }
 
@@ -58,7 +108,6 @@ async function cargarMarcas(){
 
   if(!res.ok) throw new Error(data.error)
 
-  // 🔥 Soporta array u objeto
   cargarOpciones("marca", data.data || data)
 
  }catch(err){
@@ -198,13 +247,29 @@ async function cotizar(){
    return
   }
 
+  // 🔥 NUEVA LÓGICA
+  const precioUSD = data.precioBase
+  const descuento = obtenerDescuentoKM(km)
+
+  const precioFinalUSD =
+   Math.round(precioUSD - (precioUSD * descuento / 100))
+
+  const precioARS =
+   Math.round(precioFinalUSD * DOLAR)
+
   document.getElementById("resultado").innerHTML = `
-   Precio mercado: $${data.precioBase.toLocaleString()}
+   Precio base USD: $${precioUSD.toLocaleString()}
    <br><br>
-   Descuento por KM: ${data.descuentoKM} %
+   Dólar actual: $${DOLAR}
+   <br><br>
+   Descuento por KM: ${descuento} %
    <br><br>
    <strong>
-   Precio sugerido: $${data.precioFinal.toLocaleString()}
+   Precio final USD: $${precioFinalUSD.toLocaleString()}
+   </strong>
+   <br><br>
+   <strong style="color:lime;">
+   Precio final ARS: $${precioARS.toLocaleString()}
    </strong>
   `
 
@@ -214,7 +279,7 @@ async function cotizar(){
 
 }
 
-// ================= EVENTOS (🔥 CLAVE) =================
+// ================= EVENTOS =================
 function initEventos(){
 
  document.getElementById("marca")
@@ -228,7 +293,9 @@ function initEventos(){
 }
 
 // ================= INIT =================
-window.onload = ()=>{
+window.onload = async ()=>{
+ await cargarDolar()
+ await cargarReglasKM()
  cargarMarcas()
- initEventos() // 🔥 ESTO ES LO QUE TE FALTABA
+ initEventos()
 }
