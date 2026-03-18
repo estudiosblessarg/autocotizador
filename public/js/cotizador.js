@@ -43,7 +43,7 @@ function cargarOpciones(selectId, lista){
  }
 
  array.forEach(item=>{
-  select.innerHTML += `<option value="${item}">${item.toUpperCase()}</option>`
+  select.innerHTML += `<option value="${item}">${String(item).toUpperCase()}</option>`
  })
 }
 
