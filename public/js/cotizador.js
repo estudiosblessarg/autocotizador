@@ -58,8 +58,9 @@ async function cargarMarcas(){
 
   if(!res.ok) throw new Error(data.error)
 
-  cargarOpciones("marca", data.data)
-   console.log("DATA MARCAS:", data)
+  // 🔥 Soporta array u objeto
+  cargarOpciones("marca", data.data || data)
+
  }catch(err){
   console.error("❌ Error marcas:", err)
  }
@@ -85,7 +86,7 @@ async function cargarModelos(){
 
   if(!res.ok) throw new Error(data.error)
 
-  cargarOpciones("modelo", data)
+  cargarOpciones("modelo", data.data || data)
 
  }catch(err){
   console.error("❌ Error modelos:", err)
@@ -115,7 +116,7 @@ async function cargarVersiones(){
 
   if(!res.ok) throw new Error(data.error)
 
-  cargarOpciones("version", data)
+  cargarOpciones("version", data.data || data)
 
  }catch(err){
   console.error("❌ Error versiones:", err)
@@ -148,7 +149,7 @@ async function cargarAnios(){
 
   if(!res.ok) throw new Error(data.error)
 
-  cargarOpciones("anio", data)
+  cargarOpciones("anio", data.data || data)
 
  }catch(err){
   console.error("❌ Error años:", err)
@@ -213,8 +214,21 @@ async function cotizar(){
 
 }
 
+// ================= EVENTOS (🔥 CLAVE) =================
+function initEventos(){
+
+ document.getElementById("marca")
+  .addEventListener("change", cargarModelos)
+
+ document.getElementById("modelo")
+  .addEventListener("change", cargarVersiones)
+
+ document.getElementById("version")
+  .addEventListener("change", cargarAnios)
+}
+
 // ================= INIT =================
 window.onload = ()=>{
  cargarMarcas()
-
+ initEventos() // 🔥 ESTO ES LO QUE TE FALTABA
 }
