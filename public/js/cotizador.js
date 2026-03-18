@@ -58,7 +58,7 @@ async function cargarMarcas(){
 
   if(!res.ok) throw new Error(data.error)
 
-  cargarOpciones("marca", data)
+  cargarOpciones("marca", data.data)
    console.log("DATA MARCAS:", data)
  }catch(err){
   console.error("❌ Error marcas:", err)
