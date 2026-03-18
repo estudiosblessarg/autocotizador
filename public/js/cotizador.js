@@ -1,9 +1,8 @@
- /*
+/*
 ========================================================
 CERRAR SESIÓN
 ========================================================
 */
-
 function logout(){
  localStorage.removeItem("token")
  localStorage.removeItem("user")
@@ -12,80 +11,48 @@ function logout(){
 
 // ================= NORMALIZAR =================
 function normalizar(str){
- return str.toLowerCase().trim()
+ return String(str || "").toLowerCase().trim()
 }
 
 // ================= API =================
-const API = "/api/auth/cotizador" // ✅ ESTA BIEN
+const API = "/api/auth/cotizador"
 
-// ================= CACHE CONFIG =================
-let CONFIG = null
-
-// ================= FETCH CONFIG =================
-async function cargarConfig(){
-
- try{
-
-  const res = await fetch(`${API}/marcas`) // ✅ RUTA CORRECTA
-
-  const contentType = res.headers.get("content-type")
-
-  // 🔥 evita el error del HTML
-  if(!contentType || !contentType.includes("application/json")){
-   throw new Error("El backend devolvió HTML → ruta incorrecta")
-  }
-
-  const data = await res.json()
-
-  if(!res.ok){
-   console.error("❌ Backend error:", data)
-   return
-  }
-
-  // 🔥 Si backend devuelve objeto en vez de array
-  if (Array.isArray(data)) {
- CONFIG = {}
- data.forEach(m => CONFIG[m] = {})
-}
-else if (data.data && Array.isArray(data.data)) {
- CONFIG = {}
- data.data.forEach(m => CONFIG[m] = {})
-}
-else {
- console.error("❌ Formato inválido:", data)
-}
-
-  console.log("✅ CONFIG:", CONFIG)
-
- }catch(err){
-  console.error("❌ Error cargando config", err)
+// ================= HELPERS =================
+function limpiarSelect(id){
+ const select = document.getElementById(id)
+ if(select){
+  select.innerHTML = `<option value="">Seleccione</option>`
  }
 }
 
-/*
-========================================================
-CARGAR MARCAS
-========================================================
-*/
-function cargarMarcas(){
+function cargarOpciones(selectId, lista){
+ const select = document.getElementById(selectId)
 
- const select = document.getElementById("marca")
-
- select.innerHTML = `<option value="">Seleccione una marca</option>`
-
- const marcas = Object.keys(CONFIG || {})
-
- marcas.forEach(m=>{
-  select.innerHTML += `<option value="${m}">${m.toUpperCase()}</option>`
+ lista.forEach(item=>{
+  select.innerHTML += `<option value="${item}">${item.toUpperCase()}</option>`
  })
 }
 
-/*
-========================================================
-CARGAR MODELOS
-========================================================
-*/
-function cargarModelos(){
+// ================= MARCAS =================
+async function cargarMarcas(){
+ try{
+
+  limpiarSelect("marca")
+
+  const res = await fetch(`${API}/marcas`)
+  const data = await res.json()
+
+  if(!res.ok) throw new Error(data.error)
+
+  cargarOpciones("marca", data)
+
+ }catch(err){
+  console.error("❌ Error marcas:", err)
+ }
+}
+
+// ================= MODELOS =================
+async function cargarModelos(){
 
  const marca = normalizar(
   document.getElementById("marca").value
@@ -95,23 +62,24 @@ function cargarModelos(){
  limpiarSelect("version")
  limpiarSelect("anio")
 
- if(!marca || !CONFIG[marca]) return
+ if(!marca) return
 
- const modelos = Object.keys(CONFIG[marca])
+ try{
 
- const select = document.getElementById("modelo")
+  const res = await fetch(`${API}/modelos/${marca}`)
+  const data = await res.json()
 
- modelos.forEach(m=>{
-  select.innerHTML += `<option value="${m}">${m.toUpperCase()}</option>`
- })
+  if(!res.ok) throw new Error(data.error)
+
+  cargarOpciones("modelo", data)
+
+ }catch(err){
+  console.error("❌ Error modelos:", err)
+ }
 }
 
-/*
-========================================================
-CARGAR VERSIONES
-========================================================
-*/
-function cargarVersiones(){
+// ================= VERSIONES =================
+async function cargarVersiones(){
 
  const marca = normalizar(
   document.getElementById("marca").value
@@ -126,20 +94,21 @@ function cargarVersiones(){
 
  if(!marca || !modelo) return
 
- const versiones = CONFIG[marca]?.[modelo] || []
+ try{
 
- const select = document.getElementById("version")
+  const res = await fetch(`${API}/versiones/${marca}/${modelo}`)
+  const data = await res.json()
 
- versiones.forEach(v=>{
-  select.innerHTML += `<option value="${v}">${v.toUpperCase()}</option>`
- })
+  if(!res.ok) throw new Error(data.error)
+
+  cargarOpciones("version", data)
+
+ }catch(err){
+  console.error("❌ Error versiones:", err)
+ }
 }
 
-/*
-========================================================
-CARGAR AÑOS
-========================================================
-*/
+// ================= AÑOS =================
 async function cargarAnios(){
 
  const marca = normalizar(
@@ -154,32 +123,25 @@ async function cargarAnios(){
   document.getElementById("version").value
  )
 
- if(!marca || !modelo || !version) return
-
  limpiarSelect("anio")
+
+ if(!marca || !modelo || !version) return
 
  try{
 
-  const res = await fetch(`${API}/anios/${marca}/${modelo}/${version}`) // ✅ RUTA CORRECTA
-
+  const res = await fetch(`${API}/anios/${marca}/${modelo}/${version}`)
   const data = await res.json()
 
-  const select = document.getElementById("anio")
+  if(!res.ok) throw new Error(data.error)
 
-  data.forEach(a=>{
-   select.innerHTML += `<option value="${a}">${a}</option>`
-  })
+  cargarOpciones("anio", data)
 
  }catch(err){
-  console.error("❌ Error cargando años", err)
+  console.error("❌ Error años:", err)
  }
 }
 
-/*
-========================================================
-COTIZAR
-========================================================
-*/
+// ================= COTIZAR =================
 async function cotizar(){
 
  const marca = normalizar(document.getElementById("marca").value)
@@ -188,9 +150,14 @@ async function cotizar(){
  const anio = document.getElementById("anio").value
  const km = Number(document.getElementById("km").value)
 
+ if(!marca || !modelo || !version || !anio){
+  alert("Completar todos los campos")
+  return
+ }
+
  try{
 
-  const res = await fetch(`${API}/cotizar`,{ // ✅ RUTA CORRECTA
+  const res = await fetch(`${API}/cotizar`,{
 
    method:"POST",
 
@@ -209,17 +176,10 @@ async function cotizar(){
 
   })
 
-  const contentType = res.headers.get("content-type")
-
-  if(!contentType || !contentType.includes("application/json")){
-   throw new Error("Respuesta inválida del servidor")
-  }
-
   const data = await res.json()
 
   if(!res.ok){
-   console.error("❌ Error:", data)
-   alert(data.error)
+   alert(data.error || "Error en cotización")
    return
   }
 
@@ -238,24 +198,7 @@ async function cotizar(){
  }
 }
 
-/*
-========================================================
-HELPERS
-========================================================
-*/
-function limpiarSelect(id){
- const select = document.getElementById(id)
- if(select){
-  select.innerHTML = `<option value="">Seleccione</option>`
- }
-}
-
-/*
-========================================================
-INIT
-========================================================
-*/
-window.onload = async ()=>{
- await cargarConfig()
+// ================= INIT =================
+window.onload = ()=>{
  cargarMarcas()
 }
