@@ -26,9 +26,23 @@ function limpiarSelect(id){
 }
 
 function cargarOpciones(selectId, lista){
+
  const select = document.getElementById(selectId)
 
- lista.forEach(item=>{
+ let array = []
+
+ if (Array.isArray(lista)) {
+  array = lista
+ }
+ else if (typeof lista === "object" && lista !== null) {
+  array = Object.keys(lista)
+ }
+ else {
+  console.error("❌ Datos inválidos:", lista)
+  return
+ }
+
+ array.forEach(item=>{
   select.innerHTML += `<option value="${item}">${item.toUpperCase()}</option>`
  })
 }
