@@ -45,7 +45,7 @@ async function cargarMarcas(){
   if(!res.ok) throw new Error(data.error)
 
   cargarOpciones("marca", data)
-
+   console.log("DATA MARCAS:", data)
  }catch(err){
   console.error("❌ Error marcas:", err)
  }
@@ -202,5 +202,5 @@ async function cotizar(){
 // ================= INIT =================
 window.onload = ()=>{
  cargarMarcas()
-  console.log("DATA MARCAS:", data)
+
 }
