@@ -23,7 +23,7 @@ let REGLAS_KM = []
 
 async function cargarDolar(){
  try{
-  const res = await fetch("/api/dolar")
+  const res = await fetch("/dolar")
   const data = await res.json()
 
   DOLAR = data.usd || 0
@@ -37,7 +37,7 @@ async function cargarDolar(){
 
 async function cargarReglasKM(){
  try{
-  const res = await fetch("/api/km")
+  const res = await fetch("/km")
   const data = await res.json()
 
   REGLAS_KM = data.reglas || []
