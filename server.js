@@ -29,7 +29,7 @@ app.get("/api/status",(req,res)=>{
 app.use("/api/auth", authRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/cotizaciones", cotizacionRoutes)
-app.use("/api/km", configRoutes)
+app.use("/km", configRoutes)
 app.use("/api/auth/cotizador", cotizadorRoutes)
 
 // ================= FRONT =================
