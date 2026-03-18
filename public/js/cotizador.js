@@ -1,5 +1,32 @@
 /*
 ========================================================
+CONFIG DEBUG
+========================================================
+*/
+const DEBUG = true
+
+function log(...args){
+ if(DEBUG) console.log(...args)
+}
+
+function warn(...args){
+ if(DEBUG) console.warn(...args)
+}
+
+function errorLog(...args){
+ console.error(...args)
+}
+
+function group(label){
+ if(DEBUG) console.group(label)
+}
+
+function groupEnd(){
+ if(DEBUG) console.groupEnd()
+}
+
+/*
+========================================================
 CERRAR SESIÓN
 ========================================================
 */
@@ -21,44 +48,166 @@ const API = "/api/auth/cotizador"
 let DOLAR = 0
 let REGLAS_KM = []
 
+/*
+========================================================
+FETCH PRO NIVEL EMPRESA
+========================================================
+*/
+async function fetchPro(url, options = {}){
+
+ const start = performance.now()
+
+ group(`🌐 REQUEST → ${url}`)
+ log("Options:", options)
+
+ try{
+
+  const res = await fetch(url, options)
+
+  const contentType = res.headers.get("content-type") || ""
+  const status = res.status
+
+  let raw = await res.text()
+
+  const end = performance.now()
+
+  log("⏱ Tiempo:", (end - start).toFixed(2), "ms")
+  log("📊 Status:", status)
+  log("📦 Content-Type:", contentType)
+  log("📄 Raw:", raw)
+
+  // 🔥 HTML = ERROR BACKEND
+  if(contentType.includes("text/html")){
+   warn("⚠️ Backend devolvió HTML → probablemente error 404/500")
+   return { ok:false, status, raw }
+  }
+
+  // 🔥 JSON
+  if(contentType.includes("application/json")){
+   try{
+    const json = JSON.parse(raw)
+    return { ok: res.ok, status, data: json }
+   }catch(e){
+    errorLog("❌ JSON inválido:", raw)
+    return { ok:false, status, raw }
+   }
+  }
+
+  // 🔥 Texto plano
+  return { ok: res.ok, status, data: raw }
+
+ }catch(err){
+
+  errorLog("❌ FETCH CRASH:", err)
+
+  return {
+   ok:false,
+   error: err.message
+  }
+
+ }finally{
+  groupEnd()
+ }
+}
+
+/*
+========================================================
+DÓLAR
+========================================================
+*/
 async function cargarDolar(){
- try{
-  const res = await fetch(`${API}/dolar`)
-  const data = await res.json()
 
-  DOLAR = data.usd || 0
+ const res = await fetchPro(`${API}/dolar`)
 
-  console.log("💵 Dólar:", DOLAR)
-
- }catch(err){
-  console.error("❌ Error dólar:", err)
+ if(!res.ok){
+  warn("⚠️ No se pudo cargar dólar")
+  return
  }
+
+ const data = res.data
+
+ if(typeof data !== "object"){
+  warn("⚠️ Dólar inválido:", data)
+  return
+ }
+
+ const parsed = Number(data.usd)
+
+ if(isNaN(parsed)){
+  warn("⚠️ USD inválido:", data.usd)
+  return
+ }
+
+ DOLAR = parsed
+
+ log("💵 DÓLAR FINAL:", DOLAR)
 }
 
+/*
+========================================================
+KM
+========================================================
+*/
 async function cargarReglasKM(){
- try{
-  const res = await fetch(`${API}/km`)
-  const data = await res.json()
 
-  REGLAS_KM = data.reglas || []
+ const res = await fetchPro(`${API}/km`)
 
-  console.log("🚗 Reglas KM:", REGLAS_KM)
-
- }catch(err){
-  console.error("❌ Error KM:", err)
+ if(!res.ok){
+  warn("⚠️ No se pudo cargar KM")
+  return
  }
+
+ const data = res.data
+
+ if(typeof data !== "object"){
+  warn("⚠️ KM inválido:", data)
+  return
+ }
+
+ if(!Array.isArray(data.reglas)){
+  warn("⚠️ reglas no es array:", data.reglas)
+  return
+ }
+
+ // 🔥 validación fuerte
+ REGLAS_KM = data.reglas.filter(r =>
+  r &&
+  typeof r.min === "number" &&
+  typeof r.max === "number"
+ )
+
+ log("🚗 REGLAS KM:", REGLAS_KM)
 }
 
+/*
+========================================================
+DESCUENTO KM
+========================================================
+*/
 function obtenerDescuentoKM(km){
+
+ if(!Array.isArray(REGLAS_KM)){
+  warn("⚠️ REGLAS_KM corrupto")
+  return 0
+ }
+
  for(const regla of REGLAS_KM){
+
   if(km >= regla.min && km <= regla.max){
-   return regla.descuento
+   log(`📉 Descuento aplicado: ${regla.descuento}%`)
+   return Number(regla.descuento) || 0
   }
  }
+
+ log("📉 Sin descuento aplicado")
  return 0
 }
 
-// ================= HELPERS =================
+/*
+========================================================
+HELPERS
+========================================================
+*/
 function limpiarSelect(id){
  const select = document.getElementById(id)
  if(select){
@@ -70,7 +219,11 @@ function cargarOpciones(selectId, lista){
 
  const select = document.getElementById(selectId)
 
- // 🔥 limpiar SIEMPRE para evitar duplicados
+ if(!select){
+  warn("⚠️ Select no encontrado:", selectId)
+  return
+ }
+
  select.innerHTML = `<option value="">Seleccione</option>`
 
  let array = []
@@ -82,45 +235,42 @@ function cargarOpciones(selectId, lista){
   array = Object.keys(lista)
  }
  else {
-  console.error("❌ Datos inválidos:", lista)
+  errorLog("❌ Datos inválidos:", lista)
   return
  }
 
- // 🔥 eliminar duplicados reales
  const unicos = [...new Set(array)]
 
+ log(`📊 Opciones (${selectId}):`, unicos)
+
  unicos.forEach(item=>{
-  select.innerHTML += `
-   <option value="${item}">
-    ${String(item).toUpperCase()}
-   </option>`
+  const option = document.createElement("option")
+  option.value = item
+  option.textContent = String(item).toUpperCase()
+  select.appendChild(option)
  })
 }
 
-// ================= MARCAS =================
+/*
+========================================================
+MARCAS / MODELOS / VERSIONES / AÑOS
+========================================================
+*/
 async function cargarMarcas(){
- try{
 
-  limpiarSelect("marca")
+ const res = await fetchPro(`${API}/marcas`)
 
-  const res = await fetch(`${API}/marcas`)
-  const data = await res.json()
-
-  if(!res.ok) throw new Error(data.error)
-
-  cargarOpciones("marca", data.data || data)
-
- }catch(err){
-  console.error("❌ Error marcas:", err)
+ if(!res.ok){
+  errorLog("❌ Error marcas")
+  return
  }
+
+ cargarOpciones("marca", res.data?.data || res.data)
 }
 
-// ================= MODELOS =================
 async function cargarModelos(){
 
- const marca = normalizar(
-  document.getElementById("marca").value
- )
+ const marca = normalizar(document.getElementById("marca").value)
 
  limpiarSelect("modelo")
  limpiarSelect("version")
@@ -128,84 +278,61 @@ async function cargarModelos(){
 
  if(!marca) return
 
- try{
+ const res = await fetchPro(`${API}/modelos/${marca}`)
 
-  const res = await fetch(`${API}/modelos/${marca}`)
-  const data = await res.json()
-
-  if(!res.ok) throw new Error(data.error)
-
-  cargarOpciones("modelo", data.data || data)
-
- }catch(err){
-  console.error("❌ Error modelos:", err)
+ if(!res.ok){
+  errorLog("❌ Error modelos")
+  return
  }
+
+ cargarOpciones("modelo", res.data?.data || res.data)
 }
 
-// ================= VERSIONES =================
 async function cargarVersiones(){
 
- const marca = normalizar(
-  document.getElementById("marca").value
- )
-
- const modelo = normalizar(
-  document.getElementById("modelo").value
- )
+ const marca = normalizar(document.getElementById("marca").value)
+ const modelo = normalizar(document.getElementById("modelo").value)
 
  limpiarSelect("version")
  limpiarSelect("anio")
 
  if(!marca || !modelo) return
 
- try{
+ const res = await fetchPro(`${API}/versiones/${marca}/${modelo}`)
 
-  const res = await fetch(`${API}/versiones/${marca}/${modelo}`)
-  const data = await res.json()
-
-  if(!res.ok) throw new Error(data.error)
-
-  cargarOpciones("version", data.data || data)
-
- }catch(err){
-  console.error("❌ Error versiones:", err)
+ if(!res.ok){
+  errorLog("❌ Error versiones")
+  return
  }
+
+ cargarOpciones("version", res.data?.data || res.data)
 }
 
-// ================= AÑOS =================
 async function cargarAnios(){
 
- const marca = normalizar(
-  document.getElementById("marca").value
- )
-
- const modelo = normalizar(
-  document.getElementById("modelo").value
- )
-
- const version = normalizar(
-  document.getElementById("version").value
- )
+ const marca = normalizar(document.getElementById("marca").value)
+ const modelo = normalizar(document.getElementById("modelo").value)
+ const version = normalizar(document.getElementById("version").value)
 
  limpiarSelect("anio")
 
  if(!marca || !modelo || !version) return
 
- try{
+ const res = await fetchPro(`${API}/anios/${marca}/${modelo}/${version}`)
 
-  const res = await fetch(`${API}/anios/${marca}/${modelo}/${version}`)
-  const data = await res.json()
-
-  if(!res.ok) throw new Error(data.error)
-
-  cargarOpciones("anio", data.data || data)
-
- }catch(err){
-  console.error("❌ Error años:", err)
+ if(!res.ok){
+  errorLog("❌ Error años")
+  return
  }
+
+ cargarOpciones("anio", res.data?.data || res.data)
 }
 
-// ================= COTIZAR =================
+/*
+========================================================
+COTIZAR
+========================================================
+*/
 async function cotizar(){
 
  const marca = normalizar(document.getElementById("marca").value)
@@ -219,45 +346,40 @@ async function cotizar(){
   return
  }
 
- try{
+ const res = await fetchPro(`${API}/cotizar`,{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json",
+   "Authorization":"Bearer "+localStorage.getItem("token")
+  },
+  body: JSON.stringify({ marca, modelo, version, anio, km })
+ })
 
-  const res = await fetch(`${API}/cotizar`,{
+ if(!res.ok){
+  errorLog("❌ Error cotizar:", res)
+  alert("Error en cotización")
+  return
+ }
 
-   method:"POST",
+ const data = res.data
 
-   headers:{
-    "Content-Type":"application/json",
-    "Authorization":"Bearer "+localStorage.getItem("token")
-   },
+ const precioUSD = Number(data.precioBase) || 0
+ const descuento = obtenerDescuentoKM(km)
 
-   body: JSON.stringify({
-    marca,
-    modelo,
-    version,
-    anio,
-    km
-   })
+ const precioFinalUSD =
+  Math.round(precioUSD - (precioUSD * descuento / 100))
 
-  })
+ const precioARS =
+  Math.round(precioFinalUSD * DOLAR)
 
-  const data = await res.json()
+ log("💰 RESULTADO:", {
+  precioUSD,
+  descuento,
+  precioFinalUSD,
+  precioARS
+ })
 
-  if(!res.ok){
-   alert(data.error || "Error en cotización")
-   return
-  }
-
-  // 🔥 NUEVA LÓGICA
-  const precioUSD = data.precioBase
-  const descuento = obtenerDescuentoKM(km)
-
-  const precioFinalUSD =
-   Math.round(precioUSD - (precioUSD * descuento / 100))
-
-  const precioARS =
-   Math.round(precioFinalUSD * DOLAR)
-
-  document.getElementById("resultado").innerHTML = `
+ document.getElementById("resultado").innerHTML = `
    Precio base USD: $${precioUSD.toLocaleString()}
    <br><br>
    Dólar actual: $${DOLAR}
@@ -272,30 +394,33 @@ async function cotizar(){
    Precio final ARS: $${precioARS.toLocaleString()}
    </strong>
   `
-
- }catch(err){
-  console.error("❌ Error cotizar:", err)
- }
-
 }
 
-// ================= EVENTOS =================
+/*
+========================================================
+EVENTOS
+========================================================
+*/
 function initEventos(){
-
- document.getElementById("marca")
-  .addEventListener("change", cargarModelos)
-
- document.getElementById("modelo")
-  .addEventListener("change", cargarVersiones)
-
- document.getElementById("version")
-  .addEventListener("change", cargarAnios)
+ document.getElementById("marca").addEventListener("change", cargarModelos)
+ document.getElementById("modelo").addEventListener("change", cargarVersiones)
+ document.getElementById("version").addEventListener("change", cargarAnios)
 }
 
-// ================= INIT =================
+/*
+========================================================
+INIT
+========================================================
+*/
 window.onload = async ()=>{
+ log("🚀 INIT APP")
+
  await cargarDolar()
  await cargarReglasKM()
- cargarMarcas()
+
+ await cargarMarcas()
+
  initEventos()
+
+ log("✅ APP READY")
 }
