@@ -6,25 +6,6 @@ const JSON_PATH = path.join(__dirname, "autos.json")
 
 const USD_TO_ARS = 1500
 
-// ================= DETECTAR MARCA =================
-function detectarMarcaDesdeModelo(modelo) {
-
- const mapa = {
-  "SENTRA": "NISSAN",
-  "VERSA": "NISSAN",
-  "COROLLA": "TOYOTA",
-  "HILUX": "TOYOTA",
-  "AMAROK": "VOLKSWAGEN",
-  "GOL": "VOLKSWAGEN",
-  "CRONOS": "FIAT",
-  "208": "PEUGEOT",
-  "2008": "PEUGEOT",
-  "3008": "PEUGEOT"
- }
-
- return mapa[modelo] || "OTRA"
-}
-
 // ================= NORMALIZAR ID =================
 function normalizar(str) {
  return str
@@ -44,7 +25,7 @@ async function cargarDesdeJSON() {
  let operaciones = 0
  let total = 0
 
- // 🔥 ahora el JSON YA es config
+ // 🔥 el JSON ya es config
  const configAutos = data
 
  for (const [marca, marcaData] of Object.entries(data)) {
@@ -69,7 +50,7 @@ async function cargarDesdeJSON() {
     const versionId = normalizar(version)
     const versionRef = modeloRef.collection("versiones").doc(versionId)
 
-    // 🔥 Tomamos el primer año como referencia de precio
+    // tomar primer año como referencia
     const anios = versionData.anios || {}
     const primerAnio = Object.keys(anios)[0]
     const precio = anios[primerAnio]
@@ -102,7 +83,7 @@ async function cargarDesdeJSON() {
   await batch.commit()
  }
 
- // 🔥 guardamos config directo (ya viene perfecto)
+ // 🔥 guardar config correctamente (UNA sola vez y dentro de la función)
  await db.collection("config").doc("autos").set({
   data: configAutos,
   updatedAt: new Date()
@@ -114,21 +95,6 @@ async function cargarDesdeJSON() {
  console.log("🚗 Total versiones:", total)
  console.log("🧠 Config guardada en config/autos")
  console.log("========================\n")
-}
- // ================= GUARDAR CONFIG =================
-
- await db.collection("config").doc("autos").set({
-  data: configAutos,
-  updatedAt: new Date()
- })
-
- console.log("\n========================")
- console.log("✅ CARGA COMPLETA")
- console.log("========================")
- console.log("🚗 Total autos:", total)
- console.log("🧠 Config guardada en config/autos")
- console.log("========================\n")
-
 }
 
 module.exports = {
