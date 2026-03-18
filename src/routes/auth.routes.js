@@ -7,6 +7,7 @@ const cotizacionController = require("../controllers/cotizacion.controller")
 const userController = require("../controllers/user.controller")
 const vehiculoController = require("../controllers/vehiculo.controller")
 const configController = require("../controllers/config.controller")
+const dolarController = require("../controllers/dolar.controller")
 
 // ======================
 // =================
@@ -19,6 +20,11 @@ router.post("/register",authController.register)
 router.get("/users",userController.getUsers)
 router.put("/users/:id",userController.updateRole)
 
+// ======================
+// RUTA DE DOLAR
+// ======================
+
+router.get("cotizador/dolar", dolarController.getDolar)
 
 // ======================
 // COTIZADOR
