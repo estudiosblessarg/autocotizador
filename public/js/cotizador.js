@@ -196,10 +196,11 @@ async function cotizar(){
  }catch(err){
   console.error("❌ Error cotizar:", err)
  }
- console.log("DATA MARCAS:", data)
+
 }
 
 // ================= INIT =================
 window.onload = ()=>{
  cargarMarcas()
+  console.log("DATA MARCAS:", data)
 }
