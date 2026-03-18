@@ -2,7 +2,7 @@ const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
 
-const JSON_PATH = path.join(__dirname, "autos_acara.json")
+const JSON_PATH = path.join(__dirname, "autos.json")
 
 const USD_TO_ARS = 1500
 
