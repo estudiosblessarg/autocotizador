@@ -24,7 +24,7 @@ router.put("/users/:id",userController.updateRole)
 // RUTA DE DOLAR
 // ======================
 
-router.get("cotizador/dolar", dolarController.getDolar)
+router.get("/cotizador/dolar", dolarController.getDolar)
 
 // ======================
 // COTIZADOR
