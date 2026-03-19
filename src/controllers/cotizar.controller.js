@@ -22,8 +22,8 @@ async function getConfig() {
   }
 
   const doc = await db
-   .collection("config")
-   .doc("autos")
+   .collection("marcas")
+   
    .get()
 
   if (!doc.exists) {
