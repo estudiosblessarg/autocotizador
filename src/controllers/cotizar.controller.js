@@ -73,6 +73,7 @@ exports.getModelos = async (req, res) => {
    .collection("marcas")
    .doc(marca)
    .collection("modelos")
+   .doc(modelo)
    .get()
 
   if (snap.empty) {
