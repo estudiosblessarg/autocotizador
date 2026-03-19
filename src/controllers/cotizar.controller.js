@@ -7,16 +7,15 @@ function normalizar(str) {
   .trim()
 }
 
-// ================= CACHE SIMPLE (🔥 evita leer siempre Firebase) =================
+// ================= CACHE SIMPLE =================
 let cache = null
 let lastFetch = 0
 const CACHE_TTL = 1000 * 60 * 5 // 5 minutos
 
-// ================= TRAER CONFIG =================
+// ================= TRAER MARCAS (SOLO NIVEL 1) =================
 async function getConfig() {
  try {
 
-  // 🔥 cache
   if (cache && (Date.now() - lastFetch < CACHE_TTL)) {
    return cache
   }
@@ -31,7 +30,7 @@ async function getConfig() {
   let data = {}
 
   snapshot.forEach(doc => {
-   data[doc.id] = doc.data()
+   data[doc.id] = true // solo guardamos la existencia
   })
 
   cache = data
@@ -70,13 +69,17 @@ exports.getModelos = async (req, res) => {
 
   const { marca } = req.params
 
-  const config = await getConfig()
+  const snap = await db
+   .collection("marcas")
+   .doc(marca)
+   .collection("modelos")
+   .get()
 
-  if (!config?.[marca]) {
-   return res.status(404).json({ error: "Marca no encontrada" })
+  if (snap.empty) {
+   return res.json([])
   }
 
-  const modelos = Object.keys(config[marca].modelos || {})
+  const modelos = snap.docs.map(d => d.id)
 
   res.json(modelos.sort())
 
@@ -91,18 +94,21 @@ exports.getVersiones = async (req, res) => {
 
   const { marca, modelo } = req.params
 
-  const versiones =
-   (await getConfig())
-   ?.[marca]
-   ?.modelos
-   ?.[modelo]
-   ?.versiones
+  const snap = await db
+   .collection("marcas")
+   .doc(marca)
+   .collection("modelos")
+   .doc(modelo)
+   .collection("versiones")
+   .get()
 
-  if (!versiones) {
-   return res.status(404).json({ error: "Modelo no encontrado" })
+  if (snap.empty) {
+   return res.json([])
   }
 
-  res.json(Object.keys(versiones).sort())
+  const versiones = snap.docs.map(d => d.id)
+
+  res.json(versiones.sort())
 
  } catch (err) {
   res.status(500).json({ error: err.message })
@@ -115,20 +121,22 @@ exports.getAnios = async (req, res) => {
 
   const { marca, modelo, version } = req.params
 
-  const anios =
-   (await getConfig())
-   ?.[marca]
-   ?.modelos
-   ?.[modelo]
-   ?.versiones
-   ?.[version]
-   ?.anios
+  const doc = await db
+   .collection("marcas")
+   .doc(marca)
+   .collection("modelos")
+   .doc(modelo)
+   .collection("versiones")
+   .doc(version)
+   .get()
 
-  if (!anios) {
-   return res.status(404).json({ error: "Versión no encontrada" })
+  if (!doc.exists) {
+   return res.json([])
   }
 
-  const lista = Object.keys(anios)
+  const aniosObj = doc.data().anios || {}
+
+  const lista = Object.keys(aniosObj)
    .map(a => Number(a))
    .sort((a, b) => b - a)
 
@@ -151,16 +159,24 @@ exports.cotizar = async (req, res) => {
    })
   }
 
-  const config = await getConfig()
+  const doc = await db
+   .collection("marcas")
+   .doc(marca)
+   .collection("modelos")
+   .doc(modelo)
+   .collection("versiones")
+   .doc(version)
+   .get()
 
-  const precioBase =
-   config?.[marca]
-   ?.modelos
-   ?.[modelo]
-   ?.versiones
-   ?.[version]
-   ?.anios
-   ?.[anio]
+  if (!doc.exists) {
+   return res.status(404).json({
+    error: "Versión no encontrada",
+   })
+  }
+
+  const anios = doc.data().anios || {}
+
+  const precioBase = anios[anio]
 
   if (!precioBase) {
    return res.status(404).json({
