@@ -16,29 +16,25 @@ const CACHE_TTL = 1000 * 60 * 5 // 5 minutos
 async function getConfig() {
  try {
 
-  // 🔥 usar cache
+  // 🔥 cache
   if (cache && (Date.now() - lastFetch < CACHE_TTL)) {
    return cache
   }
 
-  const doc = await db
-   .collection("marcas")
-   
-   .get()
+  const snapshot = await db.collection("marcas").get()
 
-  if (!doc.exists) {
-   console.log("❌ No existe config/autos")
+  if (snapshot.empty) {
+   console.log("❌ colección marcas vacía")
    return null
   }
 
-  const data = doc.data()
+  let data = {}
 
-  if (!data.data) {
-   console.log("❌ El documento no tiene 'data'")
-   return null
-  }
+  snapshot.forEach(doc => {
+   data[doc.id] = doc.data()
+  })
 
-  cache = data.data
+  cache = data
   lastFetch = Date.now()
 
   return cache
