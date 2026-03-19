@@ -6,8 +6,8 @@ const { db } = require("../config/firebase")
 async function getConfig() {
  try {
   const doc = await db
-   .collection("config")
-   .doc("autos")
+   .collection("marcas")
+   //.doc("autos")
    .get()
 
   if (!doc.exists) return null
