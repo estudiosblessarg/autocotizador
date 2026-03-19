@@ -1,18 +1,11 @@
 const { db } = require("../config/firebase")
 
-// ================= NORMALIZAR =================
-function normalizar(str) {
- return String(str || "")
-  .toLowerCase()
-  .trim()
-}
-
 // ================= CACHE SIMPLE =================
 let cache = null
 let lastFetch = 0
-const CACHE_TTL = 1000 * 60 * 5 // 5 minutos
+const CACHE_TTL = 1000 * 60 * 5
 
-// ================= TRAER MARCAS (SOLO NIVEL 1) =================
+// ================= TRAER MARCAS =================
 async function getConfig() {
  try {
 
@@ -30,7 +23,7 @@ async function getConfig() {
   let data = {}
 
   snapshot.forEach(doc => {
-   data[doc.id] = true // solo guardamos la existencia
+   data[doc.id] = true
   })
 
   cache = data
@@ -51,12 +44,10 @@ exports.getMarcas = async (req, res) => {
   const config = await getConfig()
 
   if (!config) {
-   return res.status(500).json({ error: "Config vacía" })
+   return res.json([])
   }
 
-  const marcas = Object.keys(config)
-
-  res.json(marcas.sort())
+  res.json(Object.keys(config).sort())
 
  } catch (err) {
   res.status(500).json({ error: err.message })
@@ -73,8 +64,7 @@ exports.getModelos = async (req, res) => {
    .collection("marcas")
    .doc(marca)
    .collection("modelos")
-   .doc(modelo)
-   .get()
+   .get() // ✅ CORRECTO
 
   if (snap.empty) {
    return res.json([])
@@ -85,6 +75,7 @@ exports.getModelos = async (req, res) => {
   res.json(modelos.sort())
 
  } catch (err) {
+  console.error("ERROR MODELOS:", err)
   res.status(500).json({ error: err.message })
  }
 }
@@ -112,6 +103,7 @@ exports.getVersiones = async (req, res) => {
   res.json(versiones.sort())
 
  } catch (err) {
+  console.error("ERROR VERSIONES:", err)
   res.status(500).json({ error: err.message })
  }
 }
@@ -144,6 +136,7 @@ exports.getAnios = async (req, res) => {
   res.json(lista)
 
  } catch (err) {
+  console.error("ERROR ANIOS:", err)
   res.status(500).json({ error: err.message })
  }
 }
@@ -171,7 +164,7 @@ exports.cotizar = async (req, res) => {
 
   if (!doc.exists) {
    return res.status(404).json({
-    error: "Versión no encontrada",
+    error: "Versión no encontrada"
    })
   }
 
@@ -181,7 +174,7 @@ exports.cotizar = async (req, res) => {
 
   if (!precioBase) {
    return res.status(404).json({
-    error: "No se encontró precio",
+    error: "No se encontró precio"
    })
   }
 
@@ -192,8 +185,7 @@ exports.cotizar = async (req, res) => {
   else if (km > 70000) ajusteKm = 0.10
   else if (km > 40000) ajusteKm = 0.05
 
-  const precioFinal =
-   Math.round(precioBase - (precioBase * ajusteKm))
+  const precioFinal = Math.round(precioBase - (precioBase * ajusteKm))
 
   res.json({
    precioBase,
@@ -202,6 +194,7 @@ exports.cotizar = async (req, res) => {
   })
 
  } catch (err) {
+  console.error("ERROR COTIZAR:", err)
   res.status(500).json({ error: err.message })
  }
 }
