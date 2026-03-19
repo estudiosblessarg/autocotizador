@@ -62,7 +62,7 @@ exports.getModelos = async (req, res) => {
 
   const snap = await db
    .collection("marcas")
-   .doc(marca)
+   .doc(marcas)
    .collection("modelos")
    .get() // ✅ CORRECTO
 
@@ -88,9 +88,9 @@ exports.getVersiones = async (req, res) => {
 
   const snap = await db
    .collection("marcas")
-   .doc(marca)
+   .doc(marcas)
    .collection("modelos")
-   .doc(modelo)
+   .doc(modelos)
    .collection("versiones")
    .get()
 
