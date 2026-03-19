@@ -3,7 +3,7 @@ const { db } = require("../config/firebase")
 // ================= CACHE SIMPLE =================
 let cache = null
 let lastFetch = 0
-const CACHE_TTL = 1000 * 60 * 5
+const CACHE_TTL = 1000 * 60 * 5 // 5 minutos
 
 // ================= TRAER MARCAS =================
 async function getConfig() {
@@ -47,9 +47,12 @@ exports.getMarcas = async (req, res) => {
    return res.json([])
   }
 
-  res.json(Object.keys(config).sort())
+  const marcas = Object.keys(config)
+
+  res.json(marcas.sort())
 
  } catch (err) {
+  console.error("ERROR MARCAS:", err)
   res.status(500).json({ error: err.message })
  }
 }
@@ -60,11 +63,15 @@ exports.getModelos = async (req, res) => {
 
   const { marca } = req.params
 
+  if (!marca) {
+   return res.status(400).json({ error: "marca requerida" })
+  }
+
   const snap = await db
    .collection("marcas")
-   .doc(marcas)
+   .doc(marca) // ✅ FIX
    .collection("modelos")
-   .get() // ✅ CORRECTO
+   .get()
 
   if (snap.empty) {
    return res.json([])
@@ -86,11 +93,17 @@ exports.getVersiones = async (req, res) => {
 
   const { marca, modelo } = req.params
 
+  if (!marca || !modelo) {
+   return res.status(400).json({
+    error: "marca y modelo requeridos"
+   })
+  }
+
   const snap = await db
    .collection("marcas")
-   .doc(marcas)
+   .doc(marca) // ✅ FIX
    .collection("modelos")
-   .doc(modelos)
+   .doc(modelo) // ✅ FIX
    .collection("versiones")
    .get()
 
@@ -113,6 +126,12 @@ exports.getAnios = async (req, res) => {
  try {
 
   const { marca, modelo, version } = req.params
+
+  if (!marca || !modelo || !version) {
+   return res.status(400).json({
+    error: "marca, modelo y version requeridos"
+   })
+  }
 
   const doc = await db
    .collection("marcas")
