@@ -8,8 +8,7 @@ function normalizar(texto) {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, "_")       // espacios → _
-    .replace(/[^\w_]/g, "")     // limpia caracteres raros
+    .replace(/\s+/g, "_")
 }
 
 // ================= CACHE SIMPLE =================
