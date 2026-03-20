@@ -1,5 +1,4 @@
 const admin = require("firebase-admin")
-require("dotenv").config()
 
 console.log("====================================")
 console.log("🔥 FIREBASE INIT START")
