@@ -1,219 +1,254 @@
 const { db } = require("../config/firebase")
 
+// ================= NORMALIZADOR PRO =================
+function normalizar(texto) {
+  if (!texto) return ""
+
+  return texto
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_")       // espacios → _
+    .replace(/[^\w_]/g, "")     // limpia caracteres raros
+}
+
 // ================= CACHE SIMPLE =================
 let cache = null
 let lastFetch = 0
-const CACHE_TTL = 1000 * 60 * 5 // 5 minutos
+const CACHE_TTL = 1000 * 60 * 5 // 5 min
 
 // ================= TRAER MARCAS =================
 async function getConfig() {
- try {
+  try {
+    if (cache && Date.now() - lastFetch < CACHE_TTL) {
+      console.log("⚡ usando cache marcas")
+      return cache
+    }
 
-  if (cache && (Date.now() - lastFetch < CACHE_TTL)) {
-   return cache
+    console.log("📡 consultando Firebase marcas...")
+
+    const snapshot = await db.collection("marcas").get()
+
+    if (snapshot.empty) {
+      console.log("❌ colección marcas vacía")
+      return null
+    }
+
+    const data = {}
+
+    snapshot.forEach(doc => {
+      data[doc.id] = true
+    })
+
+    cache = data
+    lastFetch = Date.now()
+
+    console.log("✅ marcas cargadas:", Object.keys(data))
+
+    return cache
+
+  } catch (error) {
+    console.error("❌ ERROR GET CONFIG:", error)
+    return null
   }
-
-  const snapshot = await db.collection("marcas").get()
-
-  if (snapshot.empty) {
-   console.log("❌ colección marcas vacía")
-   return null
-  }
-
-  let data = {}
-
-  snapshot.forEach(doc => {
-   data[doc.id] = true
-  })
-
-  cache = data
-  lastFetch = Date.now()
-
-  return cache
-
- } catch (error) {
-  console.error("ERROR GET CONFIG:", error)
-  return null
- }
 }
 
 // ================= MARCAS =================
 exports.getMarcas = async (req, res) => {
- try {
+  try {
+    console.log("📌 GET MARCAS")
 
-  const config = await getConfig()
+    const config = await getConfig()
 
-  if (!config) {
-   return res.json([])
+    if (!config) return res.json([])
+
+    const marcas = Object.keys(config).sort()
+
+    console.log("✅ marcas:", marcas)
+
+    res.json(marcas)
+
+  } catch (err) {
+    console.error("❌ ERROR MARCAS:", err)
+    res.status(500).json({ error: err.message })
   }
-
-  const marcas = Object.keys(config)
-
-  res.json(marcas.sort())
-
- } catch (err) {
-  console.error("ERROR MARCAS:", err)
-  res.status(500).json({ error: err.message })
- }
 }
 
 // ================= MODELOS =================
 exports.getModelos = async (req, res) => {
- try {
+  try {
+    let { marca } = req.params
 
-  const { marca } = req.params
+    marca = normalizar(marca)
 
-  if (!marca) {
-   return res.status(400).json({ error: "marca requerida" })
+    console.log("📌 GET MODELOS:", marca)
+
+    const snap = await db
+      .collection("marcas")
+      .doc(marca)
+      .collection("modelos")
+      .get()
+
+    if (snap.empty) {
+      console.log("⚠️ sin modelos para:", marca)
+      return res.json([])
+    }
+
+    const modelos = snap.docs.map(d => d.id).sort()
+
+    console.log("✅ modelos:", modelos)
+
+    res.json(modelos)
+
+  } catch (err) {
+    console.error("❌ ERROR MODELOS:", err)
+    res.status(500).json({ error: err.message })
   }
-
-  const snap = await db
-   .collection("marcas")
-   .doc(marca) // ✅ FIX
-   .collection("modelos")
-   .get()
-
-  if (snap.empty) {
-   return res.json([])
-  }
-
-  const modelos = snap.docs.map(d => d.id)
-
-  res.json(modelos.sort())
-
- } catch (err) {
-  console.error("ERROR MODELOS:", err)
-  res.status(500).json({ error: err.message })
- }
 }
 
 // ================= VERSIONES =================
 exports.getVersiones = async (req, res) => {
- try {
+  try {
+    let { marca, modelo } = req.params
 
-  const { marca, modelo } = req.params
+    marca = normalizar(marca)
+    modelo = normalizar(modelo)
 
-  if (!marca || !modelo) {
-   return res.status(400).json({
-    error: "marca y modelo requeridos"
-   })
+    console.log("📌 GET VERSIONES:", { marca, modelo })
+
+    const snap = await db
+      .collection("marcas")
+      .doc(marca)
+      .collection("modelos")
+      .doc(modelo)
+      .collection("versiones")
+      .get()
+
+    if (snap.empty) {
+      console.log("⚠️ sin versiones:", { marca, modelo })
+      return res.json([])
+    }
+
+    const versiones = snap.docs.map(d => d.id).sort()
+
+    console.log("✅ versiones:", versiones)
+
+    res.json(versiones)
+
+  } catch (err) {
+    console.error("❌ ERROR VERSIONES:", err)
+    res.status(500).json({ error: err.message })
   }
-
-  const snap = await db
-   .collection("marcas")
-   .doc(marca) // ✅ FIX
-   .collection("modelos")
-   .doc(modelo) // ✅ FIX
-   .collection("versiones")
-   .get()
-
-  if (snap.empty) {
-   return res.json([])
-  }
-
-  const versiones = snap.docs.map(d => d.id)
-
-  res.json(versiones.sort())
-
- } catch (err) {
-  console.error("ERROR VERSIONES:", err)
-  res.status(500).json({ error: err.message })
- }
 }
 
 // ================= AÑOS =================
 exports.getAnios = async (req, res) => {
- try {
+  try {
+    let { marca, modelo, version } = req.params
 
-  const { marca, modelo, version } = req.params
+    marca = normalizar(marca)
+    modelo = normalizar(modelo)
+    version = normalizar(version)
 
-  if (!marca || !modelo || !version) {
-   return res.status(400).json({
-    error: "marca, modelo y version requeridos"
-   })
+    console.log("📌 GET AÑOS:", { marca, modelo, version })
+
+    const doc = await db
+      .collection("marcas")
+      .doc(marca)
+      .collection("modelos")
+      .doc(modelo)
+      .collection("versiones")
+      .doc(version)
+      .get()
+
+    if (!doc.exists) {
+      console.log("❌ versión no existe")
+      return res.json([])
+    }
+
+    const aniosObj = doc.data().anios || {}
+
+    const lista = Object.keys(aniosObj)
+      .map(a => Number(a))
+      .sort((a, b) => b - a)
+
+    console.log("✅ años:", lista)
+
+    res.json(lista)
+
+  } catch (err) {
+    console.error("❌ ERROR AÑOS:", err)
+    res.status(500).json({ error: err.message })
   }
-
-  const doc = await db
-   .collection("marcas")
-   .doc(marca)
-   .collection("modelos")
-   .doc(modelo)
-   .collection("versiones")
-   .doc(version)
-   .get()
-
-  if (!doc.exists) {
-   return res.json([])
-  }
-
-  const aniosObj = doc.data().anios || {}
-
-  const lista = Object.keys(aniosObj)
-   .map(a => Number(a))
-   .sort((a, b) => b - a)
-
-  res.json(lista)
-
- } catch (err) {
-  console.error("ERROR ANIOS:", err)
-  res.status(500).json({ error: err.message })
- }
 }
 
 // ================= COTIZAR =================
 exports.cotizar = async (req, res) => {
- try {
+  try {
+    let { marca, modelo, version, anio, km } = req.body
 
-  const { marca, modelo, version, anio, km } = req.body
+    marca = normalizar(marca)
+    modelo = normalizar(modelo)
+    version = normalizar(version)
 
-  if (!marca || !modelo || !version || !anio) {
-   return res.status(400).json({
-    error: "marca, modelo, version y anio requeridos"
-   })
+    console.log("📌 COTIZAR:", { marca, modelo, version, anio, km })
+
+    if (!marca || !modelo || !version || !anio) {
+      return res.status(400).json({
+        error: "marca, modelo, version y anio requeridos"
+      })
+    }
+
+    const doc = await db
+      .collection("marcas")
+      .doc(marca)
+      .collection("modelos")
+      .doc(modelo)
+      .collection("versiones")
+      .doc(version)
+      .get()
+
+    if (!doc.exists) {
+      console.log("❌ versión no encontrada")
+      return res.status(404).json({
+        error: "Versión no encontrada"
+      })
+    }
+
+    const anios = doc.data().anios || {}
+
+    const precioBase = anios[anio]
+
+    if (!precioBase) {
+      console.log("❌ precio no encontrado para año:", anio)
+      return res.status(404).json({
+        error: "No se encontró precio"
+      })
+    }
+
+    // ================= AJUSTE KM =================
+    let ajusteKm = 0
+
+    if (km > 100000) ajusteKm = 0.15
+    else if (km > 70000) ajusteKm = 0.10
+    else if (km > 40000) ajusteKm = 0.05
+
+    const precioFinal = Math.round(precioBase - (precioBase * ajusteKm))
+
+    console.log("💰 resultado:", {
+      precioBase,
+      precioFinal,
+      ajusteKm
+    })
+
+    res.json({
+      precioBase,
+      precioFinal,
+      descuentoKM: ajusteKm * 100
+    })
+
+  } catch (err) {
+    console.error("❌ ERROR COTIZAR:", err)
+    res.status(500).json({ error: err.message })
   }
-
-  const doc = await db
-   .collection("marcas")
-   .doc(marca)
-   .collection("modelos")
-   .doc(modelo)
-   .collection("versiones")
-   .doc(version)
-   .get()
-
-  if (!doc.exists) {
-   return res.status(404).json({
-    error: "Versión no encontrada"
-   })
-  }
-
-  const anios = doc.data().anios || {}
-
-  const precioBase = anios[anio]
-
-  if (!precioBase) {
-   return res.status(404).json({
-    error: "No se encontró precio"
-   })
-  }
-
-  // ================= AJUSTE POR KM =================
-  let ajusteKm = 0
-
-  if (km > 100000) ajusteKm = 0.15
-  else if (km > 70000) ajusteKm = 0.10
-  else if (km > 40000) ajusteKm = 0.05
-
-  const precioFinal = Math.round(precioBase - (precioBase * ajusteKm))
-
-  res.json({
-   precioBase,
-   precioFinal,
-   descuentoKM: ajusteKm * 100
-  })
-
- } catch (err) {
-  console.error("ERROR COTIZAR:", err)
-  res.status(500).json({ error: err.message })
- }
 }
