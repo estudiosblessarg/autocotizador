@@ -77,30 +77,55 @@ async function cargarDesdeJSON() {
         }
 
         // 🔥 commit controlado
-        if (operaciones >= 400) {
+        if (operaciones >= 1) {
 
-          try {
-            console.log("💾 Commit...")
+  try {
 
-            console.time("⏱ commit")
+    console.log("====================================")
+    console.log("💾 Commit DEBUG")
+    console.log("📍 Path:", versionRef.path)
+    console.log("📦 Data:", JSON.stringify({
+      nombre: version,
+      anios
+    }).slice(0, 1000)) // corta para no explotar consola
+    console.log("====================================")
 
-            await batch.commit()
+    console.time("⏱ commit")
 
-            console.timeEnd("⏱ commit")
+    await Promise.race([
+      batch.commit(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("⏱ TIMEOUT COMMIT")), 8000)
+      )
+    ])
 
-            console.log("✅ OK")
+    console.timeEnd("⏱ commit")
 
-            // 🔥 PAUSA PARA NO SATURAR FIRESTORE
-            await sleep(200) // podés subir a 300–500 si sigue jodiendo
+    console.log("✅ OK:", versionRef.path)
 
-          } catch (err) {
-            console.error("❌ ERROR EN COMMIT:", err)
-            await sleep(1000) // retry cooldown
-          }
+  } catch (err) {
 
-          batch = db.batch()
-          operaciones = 0
-        }
+    console.error("❌ ERROR EN DOCUMENTO")
+    console.error("📍 Path:", versionRef.path)
+    console.error("🚗 Marca:", marca)
+    console.error("🚗 Modelo:", modelo)
+    console.error("🚗 Versión:", version)
+
+    console.error("📦 Payload completo:")
+    console.dir({
+      nombre: version,
+      anios
+    }, { depth: null })
+
+    console.error("🔥 ERROR:", err.message)
+
+    // 🔥 CORTAR EJECUCIÓN para detectar el problema real
+    throw err
+  }
+
+  batch = db.batch()
+  operaciones = 0
+}
 
       }
     }

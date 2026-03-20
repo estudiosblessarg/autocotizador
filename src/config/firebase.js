@@ -1,4 +1,5 @@
 const admin = require("firebase-admin")
+require("dotenv").config()
 
 console.log("====================================")
 console.log("🔥 FIREBASE INIT START")
@@ -85,6 +86,9 @@ try{
  console.log("📡 Connecting to Firestore...")
 
  db = admin.firestore()
+
+ // 🔥🔥🔥 SOLUCIÓN AL CUELGUE (NO TOCAR NADA MÁS)
+ db.settings({ preferRest: true })
 
  console.log("✅ Firestore instance created")
 

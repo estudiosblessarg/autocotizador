@@ -1,4 +1,19 @@
 const { db } = require("../config/firebase")
+const fs = require("fs-extra")
+const path = require("path")
+
+// ================= JSON LOCAL =================
+const JSON_PATH = path.join(__dirname, "../services/autos.json")
+
+let autosJSON = null
+
+async function getJSON() {
+  if (!autosJSON) {
+    console.log("📂 cargando JSON local...")
+    autosJSON = await fs.readJson(JSON_PATH)
+  }
+  return autosJSON
+}
 
 // ================= NORMALIZADOR PRO =================
 function normalizar(texto) {
@@ -9,6 +24,25 @@ function normalizar(texto) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "_")
+}
+
+// ================= BUSQUEDA LOCAL =================
+function buscarEnJSON(data, marca, modelo, version) {
+  try {
+    const marcaData = data[marca]
+    if (!marcaData) return null
+
+    const modeloData = marcaData.modelos?.[modelo]
+    if (!modeloData) return null
+
+    const versionData = modeloData.versiones?.[version]
+    if (!versionData) return null
+
+    return versionData.anios || null
+
+  } catch (e) {
+    return null
+  }
 }
 
 // ================= CACHE SIMPLE =================
@@ -29,8 +63,19 @@ async function getConfig() {
     const snapshot = await db.collection("marcas").get()
 
     if (snapshot.empty) {
-      console.log("❌ colección marcas vacía")
-      return null
+      console.log("⚠️ Firebase vacío, usando JSON fallback")
+
+      const json = await getJSON()
+      const data = {}
+
+      Object.keys(json).forEach(marca => {
+        data[normalizar(marca)] = true
+      })
+
+      cache = data
+      lastFetch = Date.now()
+
+      return cache
     }
 
     const data = {}
@@ -48,7 +93,16 @@ async function getConfig() {
 
   } catch (error) {
     console.error("❌ ERROR GET CONFIG:", error)
-    return null
+
+    console.log("📂 fallback JSON marcas")
+    const json = await getJSON()
+
+    const data = {}
+    Object.keys(json).forEach(marca => {
+      data[normalizar(marca)] = true
+    })
+
+    return data
   }
 }
 
@@ -82,22 +136,38 @@ exports.getModelos = async (req, res) => {
 
     console.log("📌 GET MODELOS:", marca)
 
-    const snap = await db
-      .collection("marcas")
-      .doc(marca)
-      .collection("modelos")
-      .get()
+    let modelos = []
 
-    if (snap.empty) {
-      console.log("⚠️ sin modelos para:", marca)
-      return res.json([])
+    try {
+      const snap = await db
+        .collection("marcas")
+        .doc(marca)
+        .collection("modelos")
+        .get()
+
+      if (!snap.empty) {
+        modelos = snap.docs.map(d => d.id)
+        console.log("🔥 modelos desde Firebase")
+      } else {
+        console.log("⚠️ Firebase vacío")
+      }
+
+    } catch (err) {
+      console.log("❌ error Firebase")
     }
 
-    const modelos = snap.docs.map(d => d.id).sort()
+    // 🔥 fallback JSON
+    if (!modelos.length) {
+      const json = await getJSON()
+      const marcaData = json[marca]
 
-    console.log("✅ modelos:", modelos)
+      if (marcaData?.modelos) {
+        modelos = Object.keys(marcaData.modelos).map(normalizar)
+        console.log("📂 modelos desde JSON")
+      }
+    }
 
-    res.json(modelos)
+    res.json(modelos.sort())
 
   } catch (err) {
     console.error("❌ ERROR MODELOS:", err)
@@ -115,24 +185,42 @@ exports.getVersiones = async (req, res) => {
 
     console.log("📌 GET VERSIONES:", { marca, modelo })
 
-    const snap = await db
-      .collection("marcas")
-      .doc(marca)
-      .collection("modelos")
-      .doc(modelo)
-      .collection("versiones")
-      .get()
+    let versiones = []
 
-    if (snap.empty) {
-      console.log("⚠️ sin versiones:", { marca, modelo })
-      return res.json([])
+    try {
+      const snap = await db
+        .collection("marcas")
+        .doc(marca)
+        .collection("modelos")
+        .doc(modelo)
+        .collection("versiones")
+        .get()
+
+      if (!snap.empty) {
+        versiones = snap.docs.map(d => d.id)
+        console.log("🔥 versiones desde Firebase")
+      } else {
+        console.log("⚠️ Firebase vacío")
+      }
+
+    } catch (err) {
+      console.log("❌ error Firebase")
     }
 
-    const versiones = snap.docs.map(d => d.id).sort()
+    // 🔥 fallback JSON
+    if (!versiones.length) {
+      const json = await getJSON()
+      const marcaData = json[marca]
 
-    console.log("✅ versiones:", versiones)
+      const modeloData = marcaData?.modelos?.[modelo]
 
-    res.json(versiones)
+      if (modeloData?.versiones) {
+        versiones = Object.keys(modeloData.versiones).map(normalizar)
+        console.log("📂 versiones desde JSON")
+      }
+    }
+
+    res.json(versiones.sort())
 
   } catch (err) {
     console.error("❌ ERROR VERSIONES:", err)
@@ -151,27 +239,50 @@ exports.getAnios = async (req, res) => {
 
     console.log("📌 GET AÑOS:", { marca, modelo, version })
 
-    const doc = await db
-      .collection("marcas")
-      .doc(marca)
-      .collection("modelos")
-      .doc(modelo)
-      .collection("versiones")
-      .doc(version)
-      .get()
+    let aniosObj = null
 
-    if (!doc.exists) {
-      console.log("❌ versión no existe")
-      return res.json([])
+    // ================= FIREBASE =================
+    try {
+      const doc = await db
+        .collection("marcas")
+        .doc(marca)
+        .collection("modelos")
+        .doc(modelo)
+        .collection("versiones")
+        .doc(version)
+        .get()
+
+      if (doc.exists) {
+        const data = doc.data()
+
+        if (data && data.anios && Object.keys(data.anios).length > 0) {
+          console.log("🔥 datos desde FIREBASE")
+          aniosObj = data.anios
+        } else {
+          console.log("⚠️ Firebase devolvió vacío")
+        }
+      }
+
+    } catch (err) {
+      console.log("❌ error Firebase, usando JSON")
     }
 
-    const aniosObj = doc.data().anios || {}
+    // ================= JSON =================
+    if (!aniosObj) {
+      const json = await getJSON()
+      const resultado = buscarEnJSON(json, marca, modelo, version)
+
+      if (resultado && Object.keys(resultado).length > 0) {
+        console.log("📂 datos desde JSON")
+        aniosObj = resultado
+      }
+    }
+
+    if (!aniosObj) return res.json([])
 
     const lista = Object.keys(aniosObj)
       .map(a => Number(a))
       .sort((a, b) => b - a)
-
-    console.log("✅ años:", lista)
 
     res.json(lista)
 
@@ -198,28 +309,54 @@ exports.cotizar = async (req, res) => {
       })
     }
 
-    const doc = await db
-      .collection("marcas")
-      .doc(marca)
-      .collection("modelos")
-      .doc(modelo)
-      .collection("versiones")
-      .doc(version)
-      .get()
+    let anios = null
 
-    if (!doc.exists) {
-      console.log("❌ versión no encontrada")
+    // ================= FIREBASE =================
+    try {
+      const doc = await db
+        .collection("marcas")
+        .doc(marca)
+        .collection("modelos")
+        .doc(modelo)
+        .collection("versiones")
+        .doc(version)
+        .get()
+
+      if (doc.exists) {
+        const data = doc.data()
+
+        if (data && data.anios && Object.keys(data.anios).length > 0) {
+          console.log("🔥 cotizando desde FIREBASE")
+          anios = data.anios
+        } else {
+          console.log("⚠️ Firebase vacío")
+        }
+      }
+
+    } catch (err) {
+      console.log("❌ Firebase error, fallback JSON")
+    }
+
+    // ================= JSON =================
+    if (!anios) {
+      const json = await getJSON()
+      const resultado = buscarEnJSON(json, marca, modelo, version)
+
+      if (resultado) {
+        console.log("📂 cotizando desde JSON")
+        anios = resultado
+      }
+    }
+
+    if (!anios) {
       return res.status(404).json({
         error: "Versión no encontrada"
       })
     }
 
-    const anios = doc.data().anios || {}
-
     const precioBase = anios[anio]
 
     if (!precioBase) {
-      console.log("❌ precio no encontrado para año:", anio)
       return res.status(404).json({
         error: "No se encontró precio"
       })
