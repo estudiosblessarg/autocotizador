@@ -278,7 +278,7 @@ async function cargarModelos(){
 
  if(!marca) return
 
- const res = await fetchPro(`${API}/modelos/${marca}/modelos`)
+ const res = await fetchPro(`${API}/modelos/${marca}`)
 
  if(!res.ok){
   errorLog("❌ Error modelos")
@@ -298,7 +298,7 @@ async function cargarVersiones(){
 
  if(!marca || !modelo) return
 
- const res = await fetchPro(`${API}/versiones/${marca}/${modelo}/versiones`)
+ const res = await fetchPro(`${API}/versiones/${marca}/${modelo}`)
 
  if(!res.ok){
   errorLog("❌ Error versiones")
@@ -318,7 +318,7 @@ async function cargarAnios(){
 
  if(!marca || !modelo || !version) return
 
- const res = await fetchPro(`${API}/anios/${marca}/${modelo}/${version}/anios`)
+ const res = await fetchPro(`${API}/anios/${marca}/${modelo}/${version}`)
 
  if(!res.ok){
   errorLog("❌ Error años")
