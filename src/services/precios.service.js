@@ -77,7 +77,7 @@ async function cargarDesdeJSON() {
         }
 
         // 🔥 commit controlado
-        if (operaciones >= 100) {
+        if (operaciones >= 400) {
 
           try {
             console.log("💾 Commit...")
