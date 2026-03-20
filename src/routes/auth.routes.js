@@ -5,7 +5,6 @@ const authController = require("../controllers/auth.controller")
 const cotizadorController = require("../controllers/cotizar.controller")
 const cotizacionController = require("../controllers/cotizacion.controller")
 const userController = require("../controllers/user.controller")
-const vehiculoController = require("../controllers/vehiculo.controller")
 const configController = require("../controllers/config.controller")
 const dolarController = require("../controllers/dolar.controller")
 
@@ -45,9 +44,9 @@ router.put("/km",configController.updateKM)
 // VEHICULOS
 // ======================
 
-router.get("/cotizador/marcas",vehiculoController.marcas)
-router.get("/cotizador/modelos/:marca",vehiculoController.modelos)
-router.get("/cotizador/versiones/:marca/:modelo",vehiculoController.versiones)
-router.get("/cotizador/anios/:marca/:modelo/:version",vehiculoController.anios)
+router.get("/cotizador/marcas",cotizadorController.getMarcas)
+router.get("/cotizador/modelos/:marca",cotizadorController.getModelos)
+router.get("/cotizador/versiones/:marca/:modelo",cotizadorController.getVersiones)
+router.get("/cotizador/anios/:marca/:modelo/:version",cotizadorController.getAnios)
 
 module.exports = router
