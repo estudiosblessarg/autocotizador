@@ -1,128 +1,116 @@
-const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
+const {db} = require("../config/firebase")
 
-// ================= JSON LOCAL =================
-const JSON_PATH = path.join(__dirname, "../services/autos.json")
+// 📁 carpeta donde están los JSON
+// 📁 carpeta services (CORREGIDO)
+const DATA_DIR = path.join(__dirname, "../services")
 
-let autosJSON = null
+let DB = null
+let CARGANDO = false // 🔥 FALTABA ESTO
 
-async function getJSON() {
-  if (!autosJSON) {
-    console.log("📂 cargando JSON local...")
-    autosJSON = await fs.readJson(JSON_PATH)
-  }
-  return autosJSON
-}
+// ================= NORMALIZADOR =================
+function normalizar(str, fallback = "undefined") {
+  if (!str) return fallback
 
-// ================= NORMALIZADOR PRO =================
-function normalizar(texto) {
-  if (!texto) return ""
-
-  return texto
+  const limpio = str
     .toString()
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+
+  return limpio === "" ? fallback : limpio
 }
 
-// ================= BUSQUEDA LOCAL =================
-function buscarEnJSON(data, marca, modelo, version) {
-  try {
-    const marcaData = data[marca]
-    if (!marcaData) return null
+// ================= CARGAR TODOS LOS JSON =================
+// ================= CARGAR TODOS LOS JSON =================
+async function cargarDB() {
 
-    const modeloData = marcaData.modelos?.[modelo]
-    if (!modeloData) return null
+  if (DB) return DB
 
-    const versionData = modeloData.versiones?.[version]
-    if (!versionData) return null
-
-    return versionData.anios || null
-
-  } catch (e) {
-    return null
+  if (CARGANDO) {
+    console.log("⏳ Esperando carga existente...")
+    while (!DB) {
+      await new Promise(r => setTimeout(r, 200))
+    }
+    return DB
   }
-}
 
-// ================= CACHE SIMPLE =================
-let cache = null
-let lastFetch = 0
-const CACHE_TTL = 1000 * 60 * 5 // 5 min
+  CARGANDO = true
 
-// ================= TRAER MARCAS =================
-async function getConfig() {
+  console.log("📂 Cargando JSON como DB desde services...")
+
   try {
-    if (cache && Date.now() - lastFetch < CACHE_TTL) {
-      console.log("⚡ usando cache marcas")
-      return cache
+
+    const files = await fs.readdir(DATA_DIR)
+
+    const jsonFiles = files.filter(f => f.endsWith(".json"))
+
+    let data = {}
+
+    for (const file of jsonFiles) {
+
+      const filePath = path.join(DATA_DIR, file)
+
+      try {
+        const contenido = await fs.readJson(filePath)
+
+        console.log("📄 cargado:", file)
+
+        for (const marca in contenido) {
+
+          const marcaKey = normalizar(marca)
+
+          if (!data[marcaKey]) {
+            data[marcaKey] = { modelos: {} }
+          }
+
+          const modelos = contenido[marca]?.modelos || {}
+
+          for (const modelo in modelos) {
+
+            const modeloKey = normalizar(modelo)
+
+            if (!data[marcaKey].modelos[modeloKey]) {
+              data[marcaKey].modelos[modeloKey] = { versiones: {} }
+            }
+
+            const versiones = modelos[modelo]?.versiones || {}
+
+            for (const version in versiones) {
+
+              const versionKey = normalizar(version)
+
+              data[marcaKey].modelos[modeloKey].versiones[versionKey] =
+                versiones[version]
+            }
+          }
+        }
+
+      } catch (err) {
+        console.error("❌ Error leyendo:", file, err.message)
+      }
     }
 
-    console.log("📡 consultando Firebase marcas...")
+    DB = data
 
-    const snapshot = await db.collection("marcas").get()
+    console.log("✅ DB lista:", Object.keys(DB).length, "marcas")
 
-    if (snapshot.empty) {
-      console.log("⚠️ Firebase vacío, usando JSON fallback")
+    return DB
 
-      const json = await getJSON()
-      const data = {}
-
-      Object.keys(json).forEach(marca => {
-        data[normalizar(marca)] = true
-      })
-
-      cache = data
-      lastFetch = Date.now()
-
-      return cache
-    }
-
-    const data = {}
-
-    snapshot.forEach(doc => {
-      data[doc.id] = true
-    })
-
-    cache = data
-    lastFetch = Date.now()
-
-    console.log("✅ marcas cargadas:", Object.keys(data))
-
-    return cache
-
-  } catch (error) {
-    console.error("❌ ERROR GET CONFIG:", error)
-
-    console.log("📂 fallback JSON marcas")
-    const json = await getJSON()
-
-    const data = {}
-    Object.keys(json).forEach(marca => {
-      data[normalizar(marca)] = true
-    })
-
-    return data
+  } catch (err) {
+    console.error("💀 ERROR CRÍTICO DB:", err)
+    throw err
   }
 }
 
 // ================= MARCAS =================
 exports.getMarcas = async (req, res) => {
   try {
-    console.log("📌 GET MARCAS")
-
-    const config = await getConfig()
-
-    if (!config) return res.json([])
-
-    const marcas = Object.keys(config).sort()
-
-    console.log("✅ marcas:", marcas)
-
-    res.json(marcas)
-
+    const db = await cargarDB()
+    res.json(Object.keys(db).sort())
   } catch (err) {
-    console.error("❌ ERROR MARCAS:", err)
     res.status(500).json({ error: err.message })
   }
 }
@@ -130,47 +118,17 @@ exports.getMarcas = async (req, res) => {
 // ================= MODELOS =================
 exports.getModelos = async (req, res) => {
   try {
-    let { marca } = req.params
+    const db = await cargarDB()
 
-    marca = normalizar(marca)
+    const marca = normalizar(req.params.marca)
 
-    console.log("📌 GET MODELOS:", marca)
-
-    let modelos = []
-
-    try {
-      const snap = await db
-        .collection("marcas")
-        .doc(marca)
-        .collection("modelos")
-        .get()
-
-      if (!snap.empty) {
-        modelos = snap.docs.map(d => d.id)
-        console.log("🔥 modelos desde Firebase")
-      } else {
-        console.log("⚠️ Firebase vacío")
-      }
-
-    } catch (err) {
-      console.log("❌ error Firebase")
-    }
-
-    // 🔥 fallback JSON
-    if (!modelos.length) {
-      const json = await getJSON()
-      const marcaData = json[marca]
-
-      if (marcaData?.modelos) {
-        modelos = Object.keys(marcaData.modelos).map(normalizar)
-        console.log("📂 modelos desde JSON")
-      }
-    }
+    const modelos = Object.keys(
+      db[marca]?.modelos || {}
+    )
 
     res.json(modelos.sort())
 
   } catch (err) {
-    console.error("❌ ERROR MODELOS:", err)
     res.status(500).json({ error: err.message })
   }
 }
@@ -178,52 +136,18 @@ exports.getModelos = async (req, res) => {
 // ================= VERSIONES =================
 exports.getVersiones = async (req, res) => {
   try {
-    let { marca, modelo } = req.params
+    const db = await cargarDB()
 
-    marca = normalizar(marca)
-    modelo = normalizar(modelo)
+    const marca = normalizar(req.params.marca)
+    const modelo = normalizar(req.params.modelo)
 
-    console.log("📌 GET VERSIONES:", { marca, modelo })
-
-    let versiones = []
-
-    try {
-      const snap = await db
-        .collection("marcas")
-        .doc(marca)
-        .collection("modelos")
-        .doc(modelo)
-        .collection("versiones")
-        .get()
-
-      if (!snap.empty) {
-        versiones = snap.docs.map(d => d.id)
-        console.log("🔥 versiones desde Firebase")
-      } else {
-        console.log("⚠️ Firebase vacío")
-      }
-
-    } catch (err) {
-      console.log("❌ error Firebase")
-    }
-
-    // 🔥 fallback JSON
-    if (!versiones.length) {
-      const json = await getJSON()
-      const marcaData = json[marca]
-
-      const modeloData = marcaData?.modelos?.[modelo]
-
-      if (modeloData?.versiones) {
-        versiones = Object.keys(modeloData.versiones).map(normalizar)
-        console.log("📂 versiones desde JSON")
-      }
-    }
+    const versiones = Object.keys(
+      db[marca]?.modelos?.[modelo]?.versiones || {}
+    )
 
     res.json(versiones.sort())
 
   } catch (err) {
-    console.error("❌ ERROR VERSIONES:", err)
     res.status(500).json({ error: err.message })
   }
 }
@@ -231,160 +155,97 @@ exports.getVersiones = async (req, res) => {
 // ================= AÑOS =================
 exports.getAnios = async (req, res) => {
   try {
-    let { marca, modelo, version } = req.params
+    const db = await cargarDB()
 
-    marca = normalizar(marca)
-    modelo = normalizar(modelo)
-    version = normalizar(version)
+    const marca = normalizar(req.params.marca)
+    const modelo = normalizar(req.params.modelo)
+    const version = normalizar(req.params.version)
 
-    console.log("📌 GET AÑOS:", { marca, modelo, version })
+    const anios =
+      db[marca]?.modelos?.[modelo]?.versiones?.[version]?.anios
 
-    let aniosObj = null
+    if (!anios) return res.json([])
 
-    // ================= FIREBASE =================
-    try {
-      const doc = await db
-        .collection("marcas")
-        .doc(marca)
-        .collection("modelos")
-        .doc(modelo)
-        .collection("versiones")
-        .doc(version)
-        .get()
-
-      if (doc.exists) {
-        const data = doc.data()
-
-        if (data && data.anios && Object.keys(data.anios).length > 0) {
-          console.log("🔥 datos desde FIREBASE")
-          aniosObj = data.anios
-        } else {
-          console.log("⚠️ Firebase devolvió vacío")
-        }
-      }
-
-    } catch (err) {
-      console.log("❌ error Firebase, usando JSON")
-    }
-
-    // ================= JSON =================
-    if (!aniosObj) {
-      const json = await getJSON()
-      const resultado = buscarEnJSON(json, marca, modelo, version)
-
-      if (resultado && Object.keys(resultado).length > 0) {
-        console.log("📂 datos desde JSON")
-        aniosObj = resultado
-      }
-    }
-
-    if (!aniosObj) return res.json([])
-
-    const lista = Object.keys(aniosObj)
-      .map(a => Number(a))
+    const lista = Object.keys(anios)
+      .map(Number)
       .sort((a, b) => b - a)
 
     res.json(lista)
 
   } catch (err) {
-    console.error("❌ ERROR AÑOS:", err)
     res.status(500).json({ error: err.message })
+  }
+}
+
+//====================
+//OBETENER DESCUENTO DB
+//====================
+async function obtenerDescuentoDesdeDB(km) {
+  try {
+    const doc = await db.collection("config").doc("km").get()
+
+    if (!doc.exists) {
+      console.warn("⚠️ config/km no existe")
+      return 0
+    }
+
+    const data = doc.data()
+
+    if (!Array.isArray(data.reglas)) {
+      console.warn("⚠️ reglas inválidas en config/km")
+      return 0
+    }
+
+    for (const regla of data.reglas) {
+      if (km >= regla.min && km <= regla.max) {
+        return Number(regla.descuento) || 0
+      }
+    }
+
+    return 0
+
+  } catch (err) {
+    console.error("❌ Error leyendo KM desde Firebase:", err.message)
+    return 0
   }
 }
 
 // ================= COTIZAR =================
 exports.cotizar = async (req, res) => {
   try {
-    let { marca, modelo, version, anio, km } = req.body
+    const dbLocal = await cargarDB()
 
-    marca = normalizar(marca)
-    modelo = normalizar(modelo)
-    version = normalizar(version)
+    const marca = normalizar(req.body.marca)
+    const modelo = normalizar(req.body.modelo)
+    const version = normalizar(req.body.version)
+    const anio = req.body.anio
+    const km = Number(req.body.km)
 
-    console.log("📌 COTIZAR:", { marca, modelo, version, anio, km })
-
-    if (!marca || !modelo || !version || !anio) {
-      return res.status(400).json({
-        error: "marca, modelo, version y anio requeridos"
-      })
-    }
-
-    let anios = null
-
-    // ================= FIREBASE =================
-    try {
-      const doc = await db
-        .collection("marcas")
-        .doc(marca)
-        .collection("modelos")
-        .doc(modelo)
-        .collection("versiones")
-        .doc(version)
-        .get()
-
-      if (doc.exists) {
-        const data = doc.data()
-
-        if (data && data.anios && Object.keys(data.anios).length > 0) {
-          console.log("🔥 cotizando desde FIREBASE")
-          anios = data.anios
-        } else {
-          console.log("⚠️ Firebase vacío")
-        }
-      }
-
-    } catch (err) {
-      console.log("❌ Firebase error, fallback JSON")
-    }
-
-    // ================= JSON =================
-    if (!anios) {
-      const json = await getJSON()
-      const resultado = buscarEnJSON(json, marca, modelo, version)
-
-      if (resultado) {
-        console.log("📂 cotizando desde JSON")
-        anios = resultado
-      }
-    }
+    const anios =
+      dbLocal[marca]?.modelos?.[modelo]?.versiones?.[version]?.anios
 
     if (!anios) {
-      return res.status(404).json({
-        error: "Versión no encontrada"
-      })
+      return res.status(404).json({ error: "No encontrado" })
     }
 
     const precioBase = anios[anio]
 
     if (!precioBase) {
-      return res.status(404).json({
-        error: "No se encontró precio"
-      })
+      return res.status(404).json({ error: "Sin precio" })
     }
 
-    // ================= AJUSTE KM =================
-    let ajusteKm = 0
+    // 🔥 DESCUENTO DINÁMICO DESDE FIREBASE
+    const descuento = await obtenerDescuentoDesdeDB(km)
 
-    if (km > 100000) ajusteKm = 0.15
-    else if (km > 70000) ajusteKm = 0.10
-    else if (km > 40000) ajusteKm = 0.05
-
-    const precioFinal = Math.round(precioBase - (precioBase * ajusteKm))
-
-    console.log("💰 resultado:", {
-      precioBase,
-      precioFinal,
-      ajusteKm
-    })
+    const precioFinal = Math.round(precioBase * (1 - descuento / 100))
 
     res.json({
       precioBase,
       precioFinal,
-      descuentoKM: ajusteKm * 100
+      descuentoKM: descuento
     })
 
   } catch (err) {
-    console.error("❌ ERROR COTIZAR:", err)
     res.status(500).json({ error: err.message })
   }
 }

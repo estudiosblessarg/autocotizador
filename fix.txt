@@ -1,1 +1,6 @@
 1 - fix a la base de datos
+2 - reparacion total de rutas y controles seguros
+3 - supervicion de cuentas y control de usuarios
+4 - supervision de paneles admin/cotizador
+5 - reparacion de paneles y comunicacion con la Db
+6 - reparacion de ux/ui para mayor comodidad de los usuarios

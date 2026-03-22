@@ -1,148 +1,130 @@
-const { db } = require("../config/firebase")
 const fs = require("fs-extra")
 const path = require("path")
 
-const JSON_PATH = path.join(__dirname, "autos.json")
+const DATA_DIR = __dirname
 
-function normalizar(str) {
-  return str
+let DB = null
+
+function normalizar(str, fallback = "undefined") {
+  if (!str) return fallback
+
+  const limpio = str
+    .toString()
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "_")
     .replace(/[^a-z0-9_]/g, "")
+
+  return limpio === "" ? fallback : limpio
 }
 
-// 🔥 delay helper
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise(r => setTimeout(r, ms))
 }
 
-async function cargarDesdeJSON() {
+// 🔥 leer TODOS los JSON
+async function leerJSONs() {
+  const files = await fs.readdir(DATA_DIR)
+  const jsonFiles = files.filter(f => f.endsWith(".json"))
 
-  const data = await fs.readJson(JSON_PATH)
+  let data = {}
 
-  console.log("📦 Marcas en JSON:", Object.keys(data).length)
+  for (const file of jsonFiles) {
+    try {
+      const filePath = path.join(DATA_DIR, file)
+      const contenido = await fs.readJson(filePath)
 
-  let totalVersiones = 0
+      console.log("📄 JSON cargado:", file)
 
-  for (const marcaData of Object.values(data)) {
-    for (const modeloData of Object.values(marcaData.modelos || {})) {
-      totalVersiones += Object.keys(modeloData.versiones || {}).length
+      // 🔥 merge profundo
+      for (const marca in contenido) {
+        const marcaKey = normalizar(marca)
+
+        if (!data[marcaKey]) {
+          data[marcaKey] = { modelos: {} }
+        }
+
+        const modelos = contenido[marca]?.modelos || {}
+
+        for (const modelo in modelos) {
+          const modeloKey = normalizar(modelo)
+
+          if (!data[marcaKey].modelos[modeloKey]) {
+            data[marcaKey].modelos[modeloKey] = { versiones: {} }
+          }
+
+          const versiones = modelos[modelo]?.versiones || {}
+
+          for (const version in versiones) {
+            const versionKey = normalizar(version)
+
+            data[marcaKey].modelos[modeloKey].versiones[versionKey] =
+              versiones[version]
+          }
+        }
+      }
+
+    } catch (err) {
+      console.error("❌ Error leyendo:", file, err.message)
     }
   }
 
-  console.log("📊 Total versiones:", totalVersiones)
+  return data
+}
 
+// ================= MAIN =================
+async function cargarDesdeJSON() {
+
+  console.log("📦 Cargando precios desde JSON (modo local)...")
+
+  const data = await leerJSONs()
+
+  let total = 0
   let procesadas = 0
-  let batch = db.batch()
-  let operaciones = 0
 
+  // 🔥 contar versiones
+  for (const marcaData of Object.values(data)) {
+    for (const modeloData of Object.values(marcaData.modelos || {})) {
+      total += Object.keys(modeloData.versiones || {}).length
+    }
+  }
+
+  console.log("📊 Total versiones:", total)
+
+  // 🔥 recorrer para debug (no guardar nada)
   for (const [marca, marcaData] of Object.entries(data)) {
-
-    const marcaId = normalizar(marca)
-    const marcaRef = db.collection("marcas").doc(marcaId)
-
-    batch.set(marcaRef, { nombre: marca }, { merge: true })
 
     for (const [modelo, modeloData] of Object.entries(marcaData.modelos || {})) {
 
-      const modeloId = normalizar(modelo)
-      const modeloRef = marcaRef.collection("modelos").doc(modeloId)
-
-      batch.set(modeloRef, {
-        nombre: modelo,
-        marca: marca
-      }, { merge: true })
-
       for (const [version, versionData] of Object.entries(modeloData.versiones || {})) {
 
-        const versionId = normalizar(version)
-        const versionRef = modeloRef.collection("versiones").doc(versionId)
-
-        const anios = versionData.anios || {}
-
-        batch.set(versionRef, {
-          nombre: version,
-          anios,
-          updatedAt: new Date()
-        })
-
         procesadas++
-        operaciones++
 
-        // 🔥 progreso
+        // progreso real
         if (procesadas % 50 === 0) {
-          const porcentaje = ((procesadas / totalVersiones) * 100).toFixed(2)
-          console.log(`🚀 ${procesadas}/${totalVersiones} (${porcentaje}%)`)
+          const pct = ((procesadas / total) * 100).toFixed(2)
+          console.log(`🚀 ${procesadas}/${total} (${pct}%)`)
         }
-
-        // 🔥 commit controlado
-        if (operaciones >= 1) {
-
-  try {
-
-    console.log("====================================")
-    console.log("💾 Commit DEBUG")
-    console.log("📍 Path:", versionRef.path)
-    console.log("📦 Data:", JSON.stringify({
-      nombre: version,
-      anios
-    }).slice(0, 1000)) // corta para no explotar consola
-    console.log("====================================")
-
-    console.time("⏱ commit")
-
-    await Promise.race([
-      batch.commit(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("⏱ TIMEOUT COMMIT")), 8000)
-      )
-    ])
-
-    console.timeEnd("⏱ commit")
-
-    console.log("✅ OK:", versionRef.path)
-
-  } catch (err) {
-
-    console.error("❌ ERROR EN DOCUMENTO")
-    console.error("📍 Path:", versionRef.path)
-    console.error("🚗 Marca:", marca)
-    console.error("🚗 Modelo:", modelo)
-    console.error("🚗 Versión:", version)
-
-    console.error("📦 Payload completo:")
-    console.dir({
-      nombre: version,
-      anios
-    }, { depth: null })
-
-    console.error("🔥 ERROR:", err.message)
-
-    // 🔥 CORTAR EJECUCIÓN para detectar el problema real
-    throw err
-  }
-
-  batch = db.batch()
-  operaciones = 0
-}
-
       }
     }
   }
 
-  // 🔥 último commit
-  if (operaciones > 0) {
-    console.log("💾 Último commit...")
-    await batch.commit()
-  }
+  DB = data
 
-  console.log("\n========================")
-  console.log("✅ CARGA COMPLETA")
-  console.log(`🚗 Total: ${procesadas}`)
-  console.log("========================\n")
+  console.log("================================")
+  console.log("✅ DB LOCAL LISTA")
+  console.log("🚗 Marcas:", Object.keys(DB).length)
+  console.log("================================")
+
+  return DB
+}
+
+// 🔥 getter para usar como DB
+function getDB() {
+  return DB
 }
 
 module.exports = {
-  cargarDesdeJSON
+  cargarDesdeJSON,
+  getDB
 }

@@ -33,9 +33,58 @@ app.use((req, res, next) => {
 // ================= API =================
 
 // 🔍 health check
-app.get("/api/status", (req, res) => {
-  console.log("📌 STATUS CHECK")
-  res.json({ ok: true })
+app.get("/api/status", async (req, res) => {
+  console.log("📌 STATUS CHECK\n")
+
+  const rutas = []
+
+  function getRoutes(stack, basePath = "") {
+    stack.forEach(middleware => {
+
+      if (middleware.route) {
+        // rutas directas
+        const path = basePath + middleware.route.path
+        const methods = Object.keys(middleware.route.methods)
+
+        methods.forEach(method => {
+          rutas.push({
+            method: method.toUpperCase(),
+            path
+          })
+        })
+
+      } else if (middleware.name === "router" && middleware.handle.stack) {
+        // rutas dentro de routers
+        const newBase = middleware.regexp
+          .toString()
+          .replace("/^\\", "")
+          .replace("\\/?(?=\\/|$)/i", "")
+          .replace(/\\\//g, "/")
+
+        getRoutes(middleware.handle.stack, basePath + "/" + newBase)
+      }
+
+    })
+  }
+
+  getRoutes(app._router.stack)
+
+  // 🔥 LOG BONITO EN CONSOLA
+  console.log("========================================")
+  console.log("📡 RUTAS REGISTRADAS:")
+  console.log("========================================")
+
+  rutas.forEach(r => {
+    console.log(`${r.method.padEnd(6)} ${r.path}`)
+  })
+
+  console.log("========================================\n")
+
+  res.json({
+    ok: true,
+    total: rutas.length,
+    rutas
+  })
 })
 
 // ================= RUTAS =================

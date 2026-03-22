@@ -3,7 +3,6 @@ const router = express.Router()
 
 const authController = require("../controllers/auth.controller")
 const cotizadorController = require("../controllers/cotizar.controller")
-const cotizacionController = require("../controllers/cotizacion.controller")
 const userController = require("../controllers/user.controller")
 const configController = require("../controllers/config.controller")
 const dolarController = require("../controllers/dolar.controller")
@@ -23,7 +22,7 @@ router.put("/users/:id",userController.updateRole)
 // RUTA DE DOLAR
 // ======================
 
-router.get("/dolar", dolarController.getDolar)
+router.get("/cotizador/dolar", dolarController.getDolar)
 
 // ======================
 // COTIZADOR
@@ -36,7 +35,7 @@ router.post("/cotizador/cotizar",cotizadorController.cotizar)
 // CONFIG
 // ======================
 
-router.get("/km",configController.getKM)
+router.get("/cotizador/km",configController.getKM)
 router.put("/km",configController.updateKM)
 
 

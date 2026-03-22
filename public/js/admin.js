@@ -293,7 +293,7 @@ async function cargarConfigKM(){
 
  try{
 
-  const config = await api("/km")
+  const config = await api("/auth/cotizador/km")
 
   const tabla = document.getElementById("tablaKM")
 
