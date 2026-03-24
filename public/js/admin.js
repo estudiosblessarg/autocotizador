@@ -335,14 +335,14 @@ async function agregarKM(){
  const km = document.getElementById("kmValor").value
  const descuento = document.getElementById("kmDesc").value
 
- const config = await api("/api/auth/config/km")
+ const config = await api("/auth/config/km")
 
  config.tabla.push({
   km:Number(km),
   descuento:Number(descuento)
  })
 
- await api("/km","PUT",{tabla:config.tabla})
+ await api("/ath/config/km","PUT",{tabla:config.tabla})
 
  cargarConfigKM()
 
