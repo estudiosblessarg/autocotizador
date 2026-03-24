@@ -38,7 +38,7 @@ router.post("/cotizador/cotizar",cotizadorController.cotizar)
 router.get("/cotizador/km",configController.getKM)
 router.put("/config/km",configController.updateKM)
 
-router.put("/admin/km",configController.deleteKM)
+router.delete("/admin/km",configController.deleteKM)
 
 
 // ======================
