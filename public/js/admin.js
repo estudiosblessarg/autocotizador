@@ -363,14 +363,21 @@ async function agregarKM(){
 
 async function eliminarFilaKM(km){
 
- const config = await api("/auth/admin/km", "PUT")
+  if (!km) {
+    alert("KM inválido")
+    return
+  }
 
- config.tabla = config.tabla.filter(r=>r.km!=km)
+  try {
 
- await api("/km","PUT",{tabla:config.tabla})
+    await api(`/auth/config/km/${km}`, "DELETE")
 
- cargarConfigKM()
+    cargarConfigKM()
 
+  } catch (err) {
+    console.error("Error eliminando KM:", err)
+    alert("Error al eliminar")
+  }
 }
 
 /*
