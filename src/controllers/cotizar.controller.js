@@ -182,6 +182,9 @@ exports.getAnios = async (req, res) => {
 //====================
 async function obtenerDescuentoDesdeDB(km) {
   try {
+
+    km = Number(km) // 🔥 CLAVE
+
     const doc = await db.collection("config").doc("km").get()
 
     if (!doc.exists) {
@@ -191,13 +194,11 @@ async function obtenerDescuentoDesdeDB(km) {
 
     const data = doc.data()
 
-    // 🔥 usar tabla en vez de reglas
     if (!Array.isArray(data.tabla)) {
       console.warn("⚠️ tabla inválida en config/km")
       return 0
     }
 
-    // 🔥 normalizar y ordenar
     const tabla = data.tabla
       .map(r => ({
         km: Number(r.km),
@@ -207,12 +208,13 @@ async function obtenerDescuentoDesdeDB(km) {
 
     let descuento = 0
 
-    // 🔥 lógica por umbral
     for (const regla of tabla) {
       if (km >= regla.km) {
         descuento = regla.descuento
       }
     }
+
+    console.log("DESCUENTO FINAL:", descuento)
 
     return descuento
 
@@ -221,7 +223,6 @@ async function obtenerDescuentoDesdeDB(km) {
     return 0
   }
 }
-
 // ================= COTIZAR =================
 exports.cotizar = async (req, res) => {
   try {
