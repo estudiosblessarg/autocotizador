@@ -6,5 +6,6 @@ const {
 
 router.get("/", getKM)
 router.put("/", updateKM)
+router.delete("/", deleteKM)
 
 module.exports = router
