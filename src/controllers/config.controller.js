@@ -20,20 +20,40 @@ exports.getKM = async(req,res)=>{
 
 
 
-exports.updateKM = async(req,res)=>{
+async function updateKM(){
 
- try{
+  const km = document.getElementById("kmValor").value
+  const descuento = document.getElementById("kmDesc").value
 
-  await db.collection("config").doc("km").set(req.body)
+  if (!km || !descuento || isNaN(km) || isNaN(descuento)) {
+    alert("Datos inválidos")
+    return
+  }
 
-  res.json({success:true})
+  const config = await api("/auth/cotizador/km") || {}
 
- }catch(error){
+  // 🔥 asegurar array
+  let tabla = Array.isArray(config.tabla) ? config.tabla : []
 
-  res.status(500).json({
-   error:error.message
-  })
+  // 🔥 evitar duplicados (por km)
+  const existe = tabla.find(e => Number(e.km) === Number(km))
 
- }
+  if (existe) {
+    if (!confirm("Ese KM ya existe. ¿Querés reemplazarlo?")) return
 
+    existe.descuento = Number(descuento)
+  } else {
+    tabla.push({
+      km: Number(km),
+      descuento: Number(descuento)
+    })
+  }
+
+  // 🔥 ordenar por km
+  tabla.sort((a, b) => a.km - b.km)
+
+  // 🔥 guardar
+  await api("/auth/config/km", "PUT", { tabla })
+
+  cargarConfigKM()
 }
