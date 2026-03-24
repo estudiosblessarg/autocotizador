@@ -315,36 +315,30 @@ async function cotizar(){
 
  const data = res.data
 
- // 🔥 PRECIO VIENE EN ARS
- const precioARSBase = Number(data.precioBase) || 0
+ // 🔥 AHORA ES USD DIRECTO
+ const precioUSDBase = Number(data.precioBase) || 0
 
- // 🔥 CONVERSIÓN A USD
- const precioUSD = Math.round(precioARSBase / DOLAR)
-
+ // 🔥 aplicar descuento (pero NO mostrarlo)
  const descuento = obtenerDescuentoKM(km)
 
  const precioFinalUSD =
-  Math.round(precioUSD - (precioUSD * descuento / 100))
+  Math.round(precioUSDBase - (precioUSDBase * descuento / 100))
 
+ // 🔥 convertir a ARS
  const precioFinalARS =
   Math.round(precioFinalUSD * DOLAR)
 
  log("💰 RESULTADO:", {
-  precioARSBase,
-  precioUSD,
+  precioUSDBase,
   descuento,
   precioFinalUSD,
   precioFinalARS
  })
 
  document.getElementById("resultado").innerHTML = `
-   Precio base ARS: $${precioARSBase.toLocaleString()}
-   <br><br>
-   Precio base USD: $${precioUSD.toLocaleString()}
+   Precio base USD: $${precioUSDBase.toLocaleString()}
    <br><br>
    Dólar: $${DOLAR}
-   <br><br>
-   Descuento KM: ${descuento}%
    <br><br>
    <strong>USD final: $${precioFinalUSD.toLocaleString()}</strong>
    <br><br>
