@@ -336,12 +336,13 @@ async function cotizar(){
  })
 
  document.getElementById("resultado").innerHTML = `
-   Precio base USD: $${precioUSDBase.toLocaleString()}
+   Buscando en la base de datos
    <br><br>
-   Dólar: $${DOLAR}
+   Datos encontrados
    <br><br>
-   <strong>USD final: $${precioFinalUSD.toLocaleString()}</strong>
+   <strong>Calculando kilometrajes</strong>
    <br><br>
+   <strong>Resultado final:</strong>
    <strong style="color:lime;">ARS final: $${precioFinalARS.toLocaleString()}</strong>
  `
 }
