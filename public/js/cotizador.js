@@ -157,11 +157,13 @@ async function cargarReglasKM(){
  }
 
  // 🔥 ahora guardás directo
- REGLAS_KM = data.filter(r =>
-  r &&
-  typeof r.km === "number" &&
-  typeof r.descuento === "number"
- )
+REGLAS_KM = data
+  .filter(r =>
+    r &&
+    typeof r.km === "number" &&
+    typeof r.descuento === "number"
+  )
+  .sort((a, b) => a.km - b.km) // 🔥 CLAVE
 
  log("🚗 REGLAS KM:", REGLAS_KM)
 }
