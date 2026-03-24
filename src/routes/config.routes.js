@@ -1,7 +1,8 @@
 const router = require("express").Router()
 const {
  getKM,
- updateKM
+ updateKM,
+ deleteKM
 } = require("../controllers/config.controller")
 
 router.get("/", getKM)
