@@ -191,18 +191,30 @@ async function obtenerDescuentoDesdeDB(km) {
 
     const data = doc.data()
 
-    if (!Array.isArray(data.reglas)) {
-      console.warn("⚠️ reglas inválidas en config/km")
+    // 🔥 usar tabla en vez de reglas
+    if (!Array.isArray(data.tabla)) {
+      console.warn("⚠️ tabla inválida en config/km")
       return 0
     }
 
-    for (const regla of data.reglas) {
-      if (km >= regla.min && km <= regla.max) {
-        return Number(regla.descuento) || 0
+    // 🔥 normalizar y ordenar
+    const tabla = data.tabla
+      .map(r => ({
+        km: Number(r.km),
+        descuento: Number(r.descuento)
+      }))
+      .sort((a, b) => a.km - b.km)
+
+    let descuento = 0
+
+    // 🔥 lógica por umbral
+    for (const regla of tabla) {
+      if (km >= regla.km) {
+        descuento = regla.descuento
       }
     }
 
-    return 0
+    return descuento
 
   } catch (err) {
     console.error("❌ Error leyendo KM desde Firebase:", err.message)
