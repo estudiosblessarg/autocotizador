@@ -332,20 +332,33 @@ async function cargarConfigKM(){
 
 async function agregarKM(){
 
- const km = document.getElementById("kmValor").value
- const descuento = document.getElementById("kmDesc").value
+  const km = document.getElementById("kmValor").value
+  const descuento = document.getElementById("kmDesc").value
 
- const config = await api("/auth/config/km", "PUT")
+  const config = await api("/auth/cotizador/km")
 
- config.tabla.push({
-  km:Number(km),
-  descuento:Number(descuento)
- })
+  // 🔥 asegurar estructura
+  let tabla = []
 
- await api("/ath/config/km","PUT",{tabla:config.tabla})
+  if (Array.isArray(config)) {
+    tabla = config
+  } else if (Array.isArray(config.tabla)) {
+    tabla = config.tabla
+  } else if (typeof config === "object") {
+    // 🔥 convertir objeto a array
+    tabla = Object.values(config)
+  }
 
- cargarConfigKM()
+  // 🔥 agregar nuevo
+  tabla.push({
+    km: Number(km),
+    descuento: Number(descuento)
+  })
 
+  // 🔥 guardar siempre como { tabla: [...] }
+  await api("/auth/config/km", "PUT", { tabla })
+
+  cargarConfigKM()
 }
 
 async function eliminarFilaKM(km){
