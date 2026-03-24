@@ -370,7 +370,7 @@ async function eliminarFilaKM(km){
 
   try {
 
-    await api(`/auth/config/km/${km}`, "DELETE")
+    await api(`/auth/admin/km/${km}`, "DELETE")
 
     cargarConfigKM()
 
