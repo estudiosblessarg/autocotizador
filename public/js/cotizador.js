@@ -343,7 +343,7 @@ async function cotizar(){
    <strong>Calculando kilometrajes</strong>
    <br><br>
    <strong>Resultado final:</strong>
-   <strong style="color:lime;">ARS final: $${precioFinalARS.toLocaleString()}</strong>
+   <strong style="color:lime;">ARS final: $${precioFinalUSD.toLocaleString()}000</strong>
  `
 }
 
