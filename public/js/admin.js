@@ -363,7 +363,7 @@ async function agregarKM(){
 
 async function eliminarFilaKM(km){
 
- const config = await api("/auth/km")
+ const config = await api("/auth/admin/km", "PUT")
 
  config.tabla = config.tabla.filter(r=>r.km!=km)
 
